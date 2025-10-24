@@ -1,0 +1,2 @@
+# orochi
+Distributed storage system
