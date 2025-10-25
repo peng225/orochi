@@ -1,0 +1,64 @@
+openapi: 3.0.1
+info:
+  title: Orochi gateway object API
+  version: 0.1.0
+  description: API for orochi gateway object manipulation
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+
+security: []
+paths:
+  /{bucket}/{object}:
+    get:
+      summary: Get a object
+      operationId: getObject
+      parameters:
+        - $ref: '#/components/parameters/bucketParam'
+        - $ref: '#/components/parameters/objectParam'
+      responses:
+        '200':
+          description: Object received successfully
+          content:
+            application/octet-stream:
+            schema:
+              type: string
+              format: binary
+        '400':
+          description: Bucket should be created first
+        '404':
+          description: Object not found
+
+    put:
+      summary: Create a object
+      operationId: createObject
+      parameters:
+        - $ref: '#/components/parameters/bucketParam'
+        - $ref: '#/components/parameters/objectParam'
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '201':
+          description: Object created successfully
+        '400':
+          description: Bucket should be created first
+
+components:
+  parameters:
+    bucketParam:
+      name: bucket
+      in: path
+      required: true
+      schema:
+        type: string
+    objectParam:
+      name: object
+      in: path
+      required: true
+      schema:
+        type: string
