@@ -2,7 +2,6 @@ package handler
 
 import (
 	"errors"
-	"io"
 	"log/slog"
 	"net/http"
 
@@ -21,7 +20,7 @@ func NewObjectHandler(os service.ObjectService) *ObjectHandler {
 }
 
 func (oh *ObjectHandler) GetObject(w http.ResponseWriter, r *http.Request, bucket server.BucketParam, object server.ObjectParam) {
-	obj, err := oh.os.GetObject(string(bucket), string(object))
+	data, err := oh.os.GetObject(string(bucket), string(object))
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrObjectNotFound):
@@ -31,11 +30,7 @@ func (oh *ObjectHandler) GetObject(w http.ResponseWriter, r *http.Request, bucke
 		}
 		return
 	}
-	data, err := io.ReadAll(obj)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+
 	_, err = w.Write(data)
 	if err != nil {
 		slog.Error("Failed to write data.", "err", err)

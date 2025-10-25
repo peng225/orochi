@@ -23,6 +23,7 @@ func NewObjectHandler(os service.ObjectService) *ObjectHandler {
 func (oh *ObjectHandler) GetObject(w http.ResponseWriter, r *http.Request, bucket server.BucketParam, object server.ObjectParam) {
 	obj, err := oh.os.GetObject(r.Context(), string(bucket), string(object))
 	if err != nil {
+		slog.Error("GetObject failed.", "err", err)
 		switch {
 		case errors.Is(err, service.ErrBucketNotFound):
 			w.WriteHeader(http.StatusBadRequest)
@@ -51,6 +52,7 @@ func (oh *ObjectHandler) CreateObject(w http.ResponseWriter, r *http.Request, bu
 	defer r.Body.Close()
 	err := oh.os.CreateObject(r.Context(), string(bucket), string(object), r.Body)
 	if err != nil {
+		slog.Error("CreateObject failed.", "err", err)
 		switch {
 		case errors.Is(err, service.ErrBucketNotFound):
 			w.WriteHeader(http.StatusBadRequest)

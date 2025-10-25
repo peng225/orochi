@@ -28,8 +28,8 @@ func NewDataStoreObjectStore(baseURL string) *DataStoreObjectStore {
 	}
 }
 
-func (os *DataStoreObjectStore) GetObject(ctx context.Context, bucket, object string) (io.ReadCloser, error) {
-	res, err := os.c.GetObject(ctx, bucket, object)
+func (dsos *DataStoreObjectStore) GetObject(ctx context.Context, bucket, object string) (io.ReadCloser, error) {
+	res, err := dsos.c.GetObject(ctx, bucket, object)
 	if err != nil {
 		return nil, fmt.Errorf("GetObject failed: %w", err)
 	}
@@ -44,8 +44,8 @@ func (os *DataStoreObjectStore) GetObject(ctx context.Context, bucket, object st
 	return res.Body, nil
 }
 
-func (os *DataStoreObjectStore) CreateObject(ctx context.Context, bucket, object string, data io.Reader) error {
-	res, err := os.c.CreateObjectWithBody(ctx, bucket, object, "application/octet-stream", data)
+func (dsos *DataStoreObjectStore) CreateObject(ctx context.Context, bucket, object string, data io.Reader) error {
+	res, err := dsos.c.CreateObjectWithBody(ctx, bucket, object, "application/octet-stream", data)
 	if err != nil {
 		return fmt.Errorf("CreateObject failed: %w", err)
 	}
