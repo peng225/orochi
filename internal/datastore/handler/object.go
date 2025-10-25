@@ -44,12 +44,7 @@ func (oh *ObjectHandler) GetObject(w http.ResponseWriter, r *http.Request, bucke
 }
 
 func (oh *ObjectHandler) CreateObject(w http.ResponseWriter, r *http.Request, bucket server.BucketParam, object server.ObjectParam) {
-	defer func() {
-		err := r.Body.Close()
-		if err != nil {
-			slog.Error("failed to close body.", "err", err)
-		}
-	}()
+	defer r.Body.Close()
 	err := oh.os.CreateObject(string(bucket), string(object), r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

@@ -33,12 +33,7 @@ func (oh *ObjectHandler) GetObject(w http.ResponseWriter, r *http.Request, bucke
 		}
 		return
 	}
-	defer func() {
-		err := obj.Close()
-		if err != nil {
-			slog.Error("failed to close obj.", "err", err)
-		}
-	}()
+	defer obj.Close()
 
 	data, err := io.ReadAll(obj)
 	if err != nil {
@@ -53,12 +48,7 @@ func (oh *ObjectHandler) GetObject(w http.ResponseWriter, r *http.Request, bucke
 }
 
 func (oh *ObjectHandler) CreateObject(w http.ResponseWriter, r *http.Request, bucket server.BucketParam, object server.ObjectParam) {
-	defer func() {
-		err := r.Body.Close()
-		if err != nil {
-			slog.Error("failed to close body.", "err", err)
-		}
-	}()
+	defer r.Body.Close()
 	err := oh.os.CreateObject(r.Context(), string(bucket), string(object), r.Body)
 	if err != nil {
 		switch {
