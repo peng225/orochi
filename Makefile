@@ -10,6 +10,10 @@ GOLANGCI_LINT := $(BINDIR)/golangci-lint-$(GOLANGCI_LINT_VERSION)
 build:
 	CGO_ENABLED=0 go build -o orochi -v main.go
 
+.PHONY: image
+image:
+	docker build -t ghcr.io/peng225/orochi .
+
 $(BINDIR):
 	mkdir -p $@
 
