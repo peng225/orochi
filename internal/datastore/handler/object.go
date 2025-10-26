@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/peng225/orochi/internal/datastore/api/object/server"
+	"github.com/peng225/orochi/internal/datastore/api/server"
 	"github.com/peng225/orochi/internal/datastore/service"
 )
 

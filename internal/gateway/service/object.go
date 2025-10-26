@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/peng225/orochi/internal/gateway/api/object/client"
+	"github.com/peng225/orochi/internal/gateway/api/client"
 )
 
 type ObjectService interface {

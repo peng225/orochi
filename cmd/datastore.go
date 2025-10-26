@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/peng225/orochi/internal/datastore/api/object/server"
+	"github.com/peng225/orochi/internal/datastore/api/server"
 	"github.com/peng225/orochi/internal/datastore/handler"
 	"github.com/peng225/orochi/internal/datastore/service"
 	"github.com/spf13/cobra"

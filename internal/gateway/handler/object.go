@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/peng225/orochi/internal/gateway/api/object/server"
+	"github.com/peng225/orochi/internal/gateway/api/server"
 	"github.com/peng225/orochi/internal/gateway/service"
 )
 
