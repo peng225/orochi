@@ -45,4 +45,5 @@ func (oh *ObjectHandler) CreateObject(w http.ResponseWriter, r *http.Request, bu
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	w.WriteHeader(http.StatusCreated)
 }

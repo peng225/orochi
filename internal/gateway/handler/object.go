@@ -61,4 +61,5 @@ func (oh *ObjectHandler) CreateObject(w http.ResponseWriter, r *http.Request, bu
 		}
 		return
 	}
+	w.WriteHeader(http.StatusCreated)
 }
