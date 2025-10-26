@@ -17,19 +17,14 @@ const (
 	maxDataSize = 4*1024*1024*1024 - headerSize
 )
 
-type ObjectService interface {
-	GetObject(bucket, object string) ([]byte, error)
-	CreateObject(bucket, object string, data io.Reader) error
+type ObjectService struct {
 }
 
-type FileObjectStore struct {
+func NewObjectStore() *ObjectService {
+	return &ObjectService{}
 }
 
-func NewFileObjectStore() *FileObjectStore {
-	return &FileObjectStore{}
-}
-
-func (fos *FileObjectStore) GetObject(bucket, object string) ([]byte, error) {
+func (osvc *ObjectService) GetObject(bucket, object string) ([]byte, error) {
 	err := checkBucketFormat(bucket)
 	if err != nil {
 		return nil, err
@@ -69,7 +64,7 @@ func (fos *FileObjectStore) GetObject(bucket, object string) ([]byte, error) {
 	return data, nil
 }
 
-func (fos *FileObjectStore) CreateObject(bucket, object string, data io.Reader) error {
+func (osvc *ObjectService) CreateObject(bucket, object string, data io.Reader) error {
 	err := checkBucketFormat(bucket)
 	if err != nil {
 		return err

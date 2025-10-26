@@ -11,10 +11,10 @@ import (
 )
 
 type ObjectHandler struct {
-	os service.ObjectService
+	os *service.ObjectService
 }
 
-func NewObjectHandler(os service.ObjectService) *ObjectHandler {
+func NewObjectHandler(os *service.ObjectService) *ObjectHandler {
 	return &ObjectHandler{
 		os: os,
 	}

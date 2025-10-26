@@ -24,7 +24,7 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// FIXME: should get the datastore address from somewhere else.
-		objHandler := handler.NewObjectHandler(service.NewDataStoreObjectStore("http://localhost:8081"))
+		objHandler := handler.NewObjectHandler(service.NewObjectStore("http://localhost:8081"))
 		h := server.Handler(objHandler)
 		port, err := cmd.Flags().GetString("port")
 		if err != nil {
