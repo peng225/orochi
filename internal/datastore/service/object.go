@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const (
@@ -29,6 +30,14 @@ func NewFileObjectStore() *FileObjectStore {
 }
 
 func (fos *FileObjectStore) GetObject(bucket, object string) ([]byte, error) {
+	err := checkBucketFormat(bucket)
+	if err != nil {
+		return nil, err
+	}
+	err = checkObjectFormat(object)
+	if err != nil {
+		return nil, err
+	}
 	path := filepath.Join(dataRoot, bucket, object)
 
 	f, err := os.Open(path)
@@ -61,6 +70,15 @@ func (fos *FileObjectStore) GetObject(bucket, object string) ([]byte, error) {
 }
 
 func (fos *FileObjectStore) CreateObject(bucket, object string, data io.Reader) error {
+	err := checkBucketFormat(bucket)
+	if err != nil {
+		return err
+	}
+	err = checkObjectFormat(object)
+	if err != nil {
+		return err
+	}
+
 	bucketPath := filepath.Join(dataRoot, bucket)
 	objectPath := filepath.Join(bucketPath, object)
 
@@ -118,5 +136,22 @@ func (fos *FileObjectStore) CreateObject(bucket, object string, data io.Reader) 
 		return fmt.Errorf("failed to rename file: %w", err)
 	}
 
+	return nil
+}
+
+func checkBucketFormat(bucket string) error {
+	if strings.Contains(bucket, "/") {
+		return fmt.Errorf("invalid bucket format")
+	}
+	return nil
+}
+
+func checkObjectFormat(object string) error {
+	items := strings.Split(object, "/")
+	for _, item := range items {
+		if len(item) == 0 {
+			return fmt.Errorf("invalid object format")
+		}
+	}
 	return nil
 }
