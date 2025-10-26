@@ -50,5 +50,5 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// datastoreCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	datastoreCmd.Flags().StringP("port", "p", "8081", "Port number")
+	datastoreCmd.Flags().StringP("port", "p", "8082", "Port number")
 }

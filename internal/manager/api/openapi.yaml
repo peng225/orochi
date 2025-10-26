@@ -1,0 +1,74 @@
+openapi: 3.0.1
+info:
+  title: Orochi gateway object API
+  version: 0.1.0
+  description: API for orochi system management
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+
+security: []
+paths:
+  /datastores:
+    post:
+      summary: Create a datastore
+      operationId: createDatastore
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              $ref: '#/components/schemas/datastoreCreateRequest'
+      responses:
+        '201':
+          description: Datastore created successfully
+          headers:
+            X-Datastore-ID:
+              description: Created datastore ID.
+              schema:
+                type: integer
+                example: 1
+        '400':
+          description: Bad request
+  /datastores/{id}:
+    get:
+      summary: Get a datastore
+      operationId: getDatastore
+      parameters:
+        - $ref: '#/components/parameters/datastoreID'
+      responses:
+        '200':
+          description: DataStore received successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/datastore'
+        '404':
+          description: DataStore not found
+
+components:
+  schemas:
+    datastoreCreateRequest:
+      type: object
+      properties:
+        baseURL:
+          type: string
+          example: http://example.com:8080
+    datastore:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        baseURL:
+          type: string
+          example: http://example.com:8080
+  parameters:
+    datastoreID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
