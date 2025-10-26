@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/peng225/orochi/internal/manager/entity"
+	"github.com/peng225/orochi/internal/entity"
 	"github.com/peng225/orochi/internal/manager/infra/postgresql/sqlc/query"
 	"github.com/peng225/orochi/internal/manager/service"
 

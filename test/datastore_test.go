@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/peng225/orochi/internal/entity"
 	mgrclient "github.com/peng225/orochi/internal/manager/api/client"
-	"github.com/peng225/orochi/internal/manager/entity"
 	"github.com/stretchr/testify/require"
 )
 

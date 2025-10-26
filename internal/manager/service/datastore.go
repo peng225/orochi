@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 
-	"github.com/peng225/orochi/internal/manager/entity"
+	"github.com/peng225/orochi/internal/entity"
 )
 
 type DatastoreService struct {
