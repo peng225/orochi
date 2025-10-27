@@ -35,11 +35,16 @@ func (dsh *DatastoreHandler) CreateDatastore(w http.ResponseWriter, r *http.Requ
 		slog.Error("Failed to unmarshal body.", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-	// TODO: check if baseURL is valid as a URL.
 	id, err := dsh.dss.CreateDatastore(r.Context(), *req.BaseURL)
 	if err != nil {
 		slog.Error("Failed to create datastore.", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		switch {
+		case errors.Is(err, service.ErrInvalidParameter):
+			w.WriteHeader(http.StatusBadRequest)
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		return
 	}
 	w.Header().Add("X-Datastore-ID", strconv.FormatInt(id, 10))
 	w.WriteHeader(http.StatusCreated)
