@@ -23,7 +23,7 @@ func prepare(t *testing.T) {
 	require.Equal(t, http.StatusCreated, res.StatusCode)
 }
 
-func TestObjectCreateGet(t *testing.T) {
+func TestObjectCreateGet_Success(t *testing.T) {
 	prepare(t)
 
 	c, err := gwclient.NewClient("http://localhost:8081")
