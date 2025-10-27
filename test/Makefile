@@ -34,7 +34,12 @@ prepare:
 		$(IMAGE_NAME) \
 		manager
 	docker run -d --name datastore --network testnet -p 8082:8082 $(IMAGE_NAME) datastore
-	docker run -d --name gateway --network testnet -p 8081:8081 $(IMAGE_NAME) gateway
+	docker run -d \
+		--name gateway \
+		--network testnet \
+		-e DSN="host=postgres port=5432 user=testuser password=testpass dbname=orochi sslmode=disable" \
+		-p 8081:8081 $(IMAGE_NAME) \
+		gateway
 
 .PHONY: clean
 clean:

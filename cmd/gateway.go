@@ -8,6 +8,8 @@ import (
 
 	"github.com/peng225/orochi/internal/gateway/api/server"
 	"github.com/peng225/orochi/internal/gateway/handler"
+	"github.com/peng225/orochi/internal/gateway/infra/datastore"
+	"github.com/peng225/orochi/internal/gateway/infra/postgresql"
 	"github.com/peng225/orochi/internal/gateway/service"
 	"github.com/spf13/cobra"
 )
@@ -23,8 +25,10 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// FIXME: should get the datastore address from somewhere else.
-		objHandler := handler.NewObjectHandler(service.NewObjectStore("http://localhost:8081"))
+		dsRepo := postgresql.NewDatastoreRepository()
+		defer dsRepo.Close()
+		objService := service.NewObjectStore(nil, datastore.NewClientFactory(), dsRepo)
+		objHandler := handler.NewObjectHandler(objService)
 		h := server.Handler(objHandler)
 		port, err := cmd.Flags().GetString("port")
 		if err != nil {

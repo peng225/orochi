@@ -27,7 +27,7 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		dsRepo := postgresql.NewPSQLDatastoreRepository()
+		dsRepo := postgresql.NewDatastoreRepository()
 		defer dsRepo.Close()
 		dsHandler := handler.NewDatastoreHandler(
 			service.NewDatastoreService(dsRepo),

@@ -14,12 +14,12 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type PSQLDatastoreRepository struct {
+type DatastoreRepository struct {
 	db *sql.DB
 	q  *query.Queries
 }
 
-func NewPSQLDatastoreRepository() *PSQLDatastoreRepository {
+func NewDatastoreRepository() *DatastoreRepository {
 	dsn := os.Getenv("DSN")
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
@@ -29,18 +29,18 @@ func NewPSQLDatastoreRepository() *PSQLDatastoreRepository {
 	if err != nil {
 		panic(err)
 	}
-	return &PSQLDatastoreRepository{
+	return &DatastoreRepository{
 		db: db,
 		q:  query.New(db),
 	}
 }
 
-func (pdr *PSQLDatastoreRepository) Close() error {
-	return pdr.db.Close()
+func (dr *DatastoreRepository) Close() error {
+	return dr.db.Close()
 }
 
-func (pdr *PSQLDatastoreRepository) GetDatastore(ctx context.Context, id int64) (*entity.Datastore, error) {
-	ds, err := pdr.q.SelectDatastore(ctx, id)
+func (dr *DatastoreRepository) GetDatastore(ctx context.Context, id int64) (*entity.Datastore, error) {
+	ds, err := dr.q.SelectDatastore(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, service.ErrDatastoreNotFound
@@ -53,8 +53,8 @@ func (pdr *PSQLDatastoreRepository) GetDatastore(ctx context.Context, id int64) 
 	}, nil
 }
 
-func (pdr *PSQLDatastoreRepository) CreateDatastore(ctx context.Context, req *service.CreateDatastoreRequest) (int64, error) {
-	id, err := pdr.q.InsertDatastore(ctx, req.BaseURL)
+func (dr *DatastoreRepository) CreateDatastore(ctx context.Context, req *service.CreateDatastoreRequest) (int64, error) {
+	id, err := dr.q.InsertDatastore(ctx, req.BaseURL)
 	if err != nil {
 		return 0, fmt.Errorf("failed to insert datastore: %w", err)
 	}

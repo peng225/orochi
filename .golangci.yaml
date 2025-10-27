@@ -8,4 +8,5 @@ linters:
       exclude-functions:
         - (*os.File).Close
         - (io.ReadCloser).Close
-        - (*github.com/peng225/orochi/internal/manager/infra/postgresql.PSQLDatastoreRepository).Close
+        - (*github.com/peng225/orochi/internal/gateway/infra/postgresql.DatastoreRepository).Close
+        - (*github.com/peng225/orochi/internal/manager/infra/postgresql.DatastoreRepository).Close
