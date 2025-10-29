@@ -12,6 +12,11 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
+// CreateBucketRequest defines model for createBucketRequest.
+type CreateBucketRequest struct {
+	Name *string `json:"name,omitempty"`
+}
+
 // CreateDatastoreRequest defines model for createDatastoreRequest.
 type CreateDatastoreRequest struct {
 	BaseURL *string `json:"baseURL,omitempty"`
@@ -28,6 +33,9 @@ type DatastoreID = int64
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Create a bucket
+	// (POST /bucket)
+	CreateBucket(w http.ResponseWriter, r *http.Request)
 	// Create a datastore
 	// (POST /datastores)
 	CreateDatastore(w http.ResponseWriter, r *http.Request)
@@ -44,6 +52,20 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// CreateBucket operation middleware
+func (siw *ServerInterfaceWrapper) CreateBucket(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateBucket(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // CreateDatastore operation middleware
 func (siw *ServerInterfaceWrapper) CreateDatastore(w http.ResponseWriter, r *http.Request) {
@@ -204,6 +226,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	m.HandleFunc("POST "+options.BaseURL+"/bucket", wrapper.CreateBucket)
 	m.HandleFunc("POST "+options.BaseURL+"/datastores", wrapper.CreateDatastore)
 	m.HandleFunc("GET "+options.BaseURL+"/datastores/{id}", wrapper.GetDatastore)
 

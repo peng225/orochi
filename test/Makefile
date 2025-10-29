@@ -25,7 +25,7 @@ prepare:
   		echo "Waiting for PostgreSQL to be ready..."; \
   		sleep 1; \
 	done
-	psql "postgresql://testuser:testpass@localhost:8180/orochi" -f ../internal/manager/infra/postgresql/sqlc/schema.sql
+	psql "postgresql://testuser:testpass@localhost:8180/orochi" -f ../internal/schema/postgresql.sql
 	docker run -d \
 		--name manager \
 		--network testnet \

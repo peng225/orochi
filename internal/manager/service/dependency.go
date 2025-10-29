@@ -25,3 +25,12 @@ type LocationGroupRepository interface {
 	UpdateDesiredDatastores(ctx context.Context, id int64, desiredDatastores []int64) error
 	GetLocationGroups(ctx context.Context) ([]*entity.LocationGroup, error)
 }
+
+type CreateBucketRequest struct {
+	Name string
+}
+
+type BucketRepository interface {
+	CreateBucket(ctx context.Context, req *CreateBucketRequest) (int64, error)
+	GetBucketByName(ctx context.Context, name string) (*entity.Bucket, error)
+}

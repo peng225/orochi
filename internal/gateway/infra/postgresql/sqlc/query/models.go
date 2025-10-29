@@ -4,6 +4,11 @@
 
 package query
 
+type Bucket struct {
+	ID   int64
+	Name string
+}
+
 type Datastore struct {
 	ID      int64
 	BaseUrl string

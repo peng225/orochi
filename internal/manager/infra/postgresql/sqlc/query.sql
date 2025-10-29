@@ -29,3 +29,15 @@ WHERE id = $2;
 
 -- name: SelectLocationGroups :many
 SELECT * from location_group;
+
+-- name: InsertBucket :one
+INSERT INTO bucket (
+   name
+) VALUES (
+  $1
+)
+RETURNING id;
+
+-- name: SelectBucketByName :one
+SELECT * FROM bucket
+WHERE name = $1;

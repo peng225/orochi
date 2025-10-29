@@ -54,7 +54,7 @@ func (dsh *DatastoreHandler) GetDatastore(w http.ResponseWriter, r *http.Request
 	ds, err := dsh.dss.GetDatastore(r.Context(), id)
 	if err != nil {
 		switch {
-		case errors.Is(err, service.ErrDatastoreNotFound):
+		case errors.Is(err, service.ErrNotFound):
 			w.WriteHeader(http.StatusNotFound)
 		default:
 			slog.Error("Failed to get datastore.", "err", err)

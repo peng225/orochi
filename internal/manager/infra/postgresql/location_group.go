@@ -62,7 +62,7 @@ func (lgr *LocationGroupRepository) GetLocationGroups(ctx context.Context) ([]*e
 	lgs, err := lgr.q.SelectLocationGroups(ctx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, service.ErrDatastoreNotFound
+			return nil, service.ErrNotFound
 		}
 		return nil, fmt.Errorf("failed to select location group: %w", err)
 	}

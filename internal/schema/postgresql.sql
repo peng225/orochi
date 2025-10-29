@@ -1,10 +1,15 @@
-create table datastore(
-    id bigserial primary key,
-    base_url varchar(128) not null
+CREATE TABLE datastore(
+    id BIGSERIAL PRIMARY KEY,
+    base_url VARCHAR(128) NOT NULL
 );
 
-create table location_group(
-    id bigserial primary key,
-    current_datastores bigint[] not null,
-    desired_datastores bigint[] not null
-)
+CREATE TABLE location_group(
+    id BIGSERIAL PRIMARY KEY,
+    current_datastores BIGINT[] NOT NULL,
+    desired_datastores BIGINT[] NOT NULL
+);
+
+CREATE TABLE bucket(
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(128) NOT NULL UNIQUE
+);

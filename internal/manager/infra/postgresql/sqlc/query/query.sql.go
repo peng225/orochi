@@ -11,6 +11,22 @@ import (
 	"github.com/lib/pq"
 )
 
+const insertBucket = `-- name: InsertBucket :one
+INSERT INTO bucket (
+   name
+) VALUES (
+  $1
+)
+RETURNING id
+`
+
+func (q *Queries) InsertBucket(ctx context.Context, name string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, insertBucket, name)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const insertDatastore = `-- name: InsertDatastore :one
 INSERT INTO datastore (
    base_url
@@ -47,6 +63,18 @@ func (q *Queries) InsertLocationGroup(ctx context.Context, arg InsertLocationGro
 	var id int64
 	err := row.Scan(&id)
 	return id, err
+}
+
+const selectBucketByName = `-- name: SelectBucketByName :one
+SELECT id, name FROM bucket
+WHERE name = $1
+`
+
+func (q *Queries) SelectBucketByName(ctx context.Context, name string) (Bucket, error) {
+	row := q.db.QueryRowContext(ctx, selectBucketByName, name)
+	var i Bucket
+	err := row.Scan(&i.ID, &i.Name)
+	return i, err
 }
 
 const selectDatastore = `-- name: SelectDatastore :one

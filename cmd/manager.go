@@ -31,10 +31,22 @@ to quickly create a Cobra application.`,
 		defer dsRepo.Close()
 		lgRepo := postgresql.NewLocationGroupRepository()
 		defer lgRepo.Close()
+		bucketRepo := postgresql.NewBucketRepository()
+		defer bucketRepo.Close()
+
 		dsHandler := handler.NewDatastoreHandler(
 			service.NewDatastoreService(dsRepo, lgRepo),
 		)
-		h := server.Handler(dsHandler)
+		bucketHandler := handler.NewBucketHandler(
+			service.NewBucketService(bucketRepo),
+		)
+		h := server.Handler(struct {
+			*handler.DatastoreHandler
+			*handler.BucketHandler
+		}{
+			dsHandler,
+			bucketHandler,
+		})
 		port, err := cmd.Flags().GetString("port")
 		if err != nil {
 			slog.Error(err.Error())

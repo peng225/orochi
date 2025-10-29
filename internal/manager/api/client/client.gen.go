@@ -15,6 +15,11 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
+// CreateBucketRequest defines model for createBucketRequest.
+type CreateBucketRequest struct {
+	Name *string `json:"name,omitempty"`
+}
+
 // CreateDatastoreRequest defines model for createDatastoreRequest.
 type CreateDatastoreRequest struct {
 	BaseURL *string `json:"baseURL,omitempty"`
@@ -102,11 +107,26 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
+	// CreateBucketWithBody request with any body
+	CreateBucketWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// CreateDatastoreWithBody request with any body
 	CreateDatastoreWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetDatastore request
 	GetDatastore(ctx context.Context, id DatastoreID, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
+
+func (c *Client) CreateBucketWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateBucketRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 func (c *Client) CreateDatastoreWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -131,6 +151,35 @@ func (c *Client) GetDatastore(ctx context.Context, id DatastoreID, reqEditors ..
 		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+// NewCreateBucketRequestWithBody generates requests for CreateBucket with any type of body
+func NewCreateBucketRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/bucket")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
 }
 
 // NewCreateDatastoreRequestWithBody generates requests for CreateDatastore with any type of body
@@ -239,11 +288,35 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
+	// CreateBucketWithBodyWithResponse request with any body
+	CreateBucketWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateBucketResponse, error)
+
 	// CreateDatastoreWithBodyWithResponse request with any body
 	CreateDatastoreWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateDatastoreResponse, error)
 
 	// GetDatastoreWithResponse request
 	GetDatastoreWithResponse(ctx context.Context, id DatastoreID, reqEditors ...RequestEditorFn) (*GetDatastoreResponse, error)
+}
+
+type CreateBucketResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateBucketResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateBucketResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
 }
 
 type CreateDatastoreResponse struct {
@@ -289,6 +362,15 @@ func (r GetDatastoreResponse) StatusCode() int {
 	return 0
 }
 
+// CreateBucketWithBodyWithResponse request with arbitrary body returning *CreateBucketResponse
+func (c *ClientWithResponses) CreateBucketWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateBucketResponse, error) {
+	rsp, err := c.CreateBucketWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateBucketResponse(rsp)
+}
+
 // CreateDatastoreWithBodyWithResponse request with arbitrary body returning *CreateDatastoreResponse
 func (c *ClientWithResponses) CreateDatastoreWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateDatastoreResponse, error) {
 	rsp, err := c.CreateDatastoreWithBody(ctx, contentType, body, reqEditors...)
@@ -305,6 +387,22 @@ func (c *ClientWithResponses) GetDatastoreWithResponse(ctx context.Context, id D
 		return nil, err
 	}
 	return ParseGetDatastoreResponse(rsp)
+}
+
+// ParseCreateBucketResponse parses an HTTP response from a CreateBucketWithResponse call
+func ParseCreateBucketResponse(rsp *http.Response) (*CreateBucketResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateBucketResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
 }
 
 // ParseCreateDatastoreResponse parses an HTTP response from a CreateDatastoreWithResponse call

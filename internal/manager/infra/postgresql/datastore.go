@@ -43,7 +43,7 @@ func (dr *DatastoreRepository) GetDatastore(ctx context.Context, id int64) (*ent
 	ds, err := dr.q.SelectDatastore(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, service.ErrDatastoreNotFound
+			return nil, service.ErrNotFound
 		}
 		return nil, fmt.Errorf("failed to select datastore: %w", err)
 	}

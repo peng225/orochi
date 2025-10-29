@@ -45,6 +45,27 @@ paths:
                 $ref: '#/components/schemas/datastore'
         '404':
           description: DataStore not found
+  /bucket:
+    post:
+      summary: Create a bucket
+      operationId: createBucket
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              $ref: '#/components/schemas/createBucketRequest'
+      responses:
+        '201':
+          description: Bucket created successfully
+          headers:
+            X-Bucket-ID:
+              description: Created bucket ID.
+              schema:
+                type: integer
+                example: 1
+        '400':
+          description: Bad request
 
 components:
   schemas:
@@ -64,6 +85,12 @@ components:
         baseURL:
           type: string
           example: http://example.com:8080
+    createBucketRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: test-bucket
   parameters:
     datastoreID:
       name: id
