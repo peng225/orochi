@@ -8,3 +8,9 @@ type Datastore struct {
 	ID      int64
 	BaseUrl string
 }
+
+type LocationGroup struct {
+	ID                int64
+	CurrentDatastores []int64
+	DesiredDatastores []int64
+}

@@ -29,8 +29,10 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		dsRepo := postgresql.NewDatastoreRepository()
 		defer dsRepo.Close()
+		lgRepo := postgresql.NewLocationGroupRepository()
+		defer lgRepo.Close()
 		dsHandler := handler.NewDatastoreHandler(
-			service.NewDatastoreService(dsRepo),
+			service.NewDatastoreService(dsRepo, lgRepo),
 		)
 		h := server.Handler(dsHandler)
 		port, err := cmd.Flags().GetString("port")

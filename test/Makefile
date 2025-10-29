@@ -33,7 +33,9 @@ prepare:
 		-p 8080:8080 \
 		$(IMAGE_NAME) \
 		manager
-	docker run -d --name datastore --network testnet -p 8082:8082 $(IMAGE_NAME) datastore
+	docker run -d --name datastore0 --network testnet -p 8082:8082 $(IMAGE_NAME) datastore
+	docker run -d --name datastore1 --network testnet -p 8083:8083 $(IMAGE_NAME) datastore
+	docker run -d --name datastore2 --network testnet -p 8084:8084 $(IMAGE_NAME) datastore
 	docker run -d \
 		--name gateway \
 		--network testnet \
@@ -45,8 +47,12 @@ prepare:
 clean:
 	docker stop gateway || true
 	docker rm gateway || true
-	docker stop datastore || true
-	docker rm datastore || true
+	docker stop datastore0 || true
+	docker rm datastore0 || true
+	docker stop datastore1 || true
+	docker rm datastore1 || true
+	docker stop datastore2 || true
+	docker rm datastore2 || true
 	docker stop manager || true
 	docker rm manager || true
 	docker stop postgres || true

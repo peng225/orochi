@@ -1,6 +1,7 @@
 package test
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -17,10 +18,13 @@ func prepare(t *testing.T) {
 
 	c, err := mgrclient.NewClient("http://localhost:8080")
 	require.NoError(t, err)
-	data := `{"baseURL": "http://datastore:8082"}`
-	res, err := c.CreateDatastoreWithBody(t.Context(), "application/json", strings.NewReader(data))
-	require.NoError(t, err)
-	require.Equal(t, http.StatusCreated, res.StatusCode)
+	ports := []string{"8082", "8083", "8084"}
+	for i, port := range ports {
+		data := fmt.Sprintf(`{"baseURL": "http://datastore%d:%s"}`, i, port)
+		res, err := c.CreateDatastoreWithBody(t.Context(), "application/json", strings.NewReader(data))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusCreated, res.StatusCode)
+	}
 }
 
 func TestObjectCreateGet_Success(t *testing.T) {

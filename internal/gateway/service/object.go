@@ -89,6 +89,7 @@ func (osvc *ObjectService) GetObject(ctx context.Context, bucket, object string)
 }
 
 func (osvc *ObjectService) CreateObject(ctx context.Context, bucket, object string, data io.Reader) error {
+	// FIXME: Should avoid per request refresh for performance.
 	err := osvc.Refresh(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to refresh: %w", err)

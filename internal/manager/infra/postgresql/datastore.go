@@ -5,11 +5,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/peng225/orochi/internal/entity"
 	"github.com/peng225/orochi/internal/manager/infra/postgresql/sqlc/query"
 	"github.com/peng225/orochi/internal/manager/service"
+	"github.com/peng225/orochi/internal/pkg/psqlutil"
 
 	_ "github.com/lib/pq"
 )
@@ -20,15 +20,7 @@ type DatastoreRepository struct {
 }
 
 func NewDatastoreRepository() *DatastoreRepository {
-	dsn := os.Getenv("DSN")
-	db, err := sql.Open("postgres", dsn)
-	if err != nil {
-		panic(err)
-	}
-	err = db.Ping()
-	if err != nil {
-		panic(err)
-	}
+	db := psqlutil.InitDB()
 	return &DatastoreRepository{
 		db: db,
 		q:  query.New(db),
@@ -37,6 +29,14 @@ func NewDatastoreRepository() *DatastoreRepository {
 
 func (dr *DatastoreRepository) Close() error {
 	return dr.db.Close()
+}
+
+func (dr *DatastoreRepository) CreateDatastore(ctx context.Context, req *service.CreateDatastoreRequest) (int64, error) {
+	id, err := dr.q.InsertDatastore(ctx, req.BaseURL)
+	if err != nil {
+		return 0, fmt.Errorf("failed to insert datastore: %w", err)
+	}
+	return id, nil
 }
 
 func (dr *DatastoreRepository) GetDatastore(ctx context.Context, id int64) (*entity.Datastore, error) {
@@ -53,10 +53,10 @@ func (dr *DatastoreRepository) GetDatastore(ctx context.Context, id int64) (*ent
 	}, nil
 }
 
-func (dr *DatastoreRepository) CreateDatastore(ctx context.Context, req *service.CreateDatastoreRequest) (int64, error) {
-	id, err := dr.q.InsertDatastore(ctx, req.BaseURL)
+func (dr *DatastoreRepository) GetDatastoreIDs(ctx context.Context) ([]int64, error) {
+	dsIDs, err := dr.q.SelectDatastoreIDs(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("failed to insert datastore: %w", err)
+		return nil, fmt.Errorf("failed to select datastore IDs: %w", err)
 	}
-	return id, nil
+	return dsIDs, nil
 }

@@ -15,15 +15,15 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
+// CreateDatastoreRequest defines model for createDatastoreRequest.
+type CreateDatastoreRequest struct {
+	BaseURL *string `json:"baseURL,omitempty"`
+}
+
 // Datastore defines model for datastore.
 type Datastore struct {
 	BaseURL *string `json:"baseURL,omitempty"`
 	Id      *int64  `json:"id,omitempty"`
-}
-
-// DatastoreCreateRequest defines model for datastoreCreateRequest.
-type DatastoreCreateRequest struct {
-	BaseURL *string `json:"baseURL,omitempty"`
 }
 
 // DatastoreID defines model for datastoreID.

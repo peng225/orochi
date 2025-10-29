@@ -7,6 +7,8 @@ package query
 
 import (
 	"context"
+
+	"github.com/lib/pq"
 )
 
 const insertDatastore = `-- name: InsertDatastore :one
@@ -25,6 +27,28 @@ func (q *Queries) InsertDatastore(ctx context.Context, baseUrl string) (int64, e
 	return id, err
 }
 
+const insertLocationGroup = `-- name: InsertLocationGroup :one
+INSERT INTO location_group (
+   current_datastores,
+   desired_datastores
+) VALUES (
+  $1, $2
+)
+RETURNING id
+`
+
+type InsertLocationGroupParams struct {
+	CurrentDatastores []int64
+	DesiredDatastores []int64
+}
+
+func (q *Queries) InsertLocationGroup(ctx context.Context, arg InsertLocationGroupParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, insertLocationGroup, pq.Array(arg.CurrentDatastores), pq.Array(arg.DesiredDatastores))
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const selectDatastore = `-- name: SelectDatastore :one
 SELECT id, base_url FROM datastore
 WHERE id = $1
@@ -35,4 +59,74 @@ func (q *Queries) SelectDatastore(ctx context.Context, id int64) (Datastore, err
 	var i Datastore
 	err := row.Scan(&i.ID, &i.BaseUrl)
 	return i, err
+}
+
+const selectDatastoreIDs = `-- name: SelectDatastoreIDs :many
+SELECT id FROM datastore
+`
+
+func (q *Queries) SelectDatastoreIDs(ctx context.Context) ([]int64, error) {
+	rows, err := q.db.QueryContext(ctx, selectDatastoreIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const selectLocationGroups = `-- name: SelectLocationGroups :many
+SELECT id, current_datastores, desired_datastores from location_group
+`
+
+func (q *Queries) SelectLocationGroups(ctx context.Context) ([]LocationGroup, error) {
+	rows, err := q.db.QueryContext(ctx, selectLocationGroups)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []LocationGroup
+	for rows.Next() {
+		var i LocationGroup
+		if err := rows.Scan(&i.ID, pq.Array(&i.CurrentDatastores), pq.Array(&i.DesiredDatastores)); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateDesiredDatastores = `-- name: UpdateDesiredDatastores :exec
+UPDATE location_group
+SET desired_datastores = $1
+WHERE id = $2
+`
+
+type UpdateDesiredDatastoresParams struct {
+	DesiredDatastores []int64
+	ID                int64
+}
+
+func (q *Queries) UpdateDesiredDatastores(ctx context.Context, arg UpdateDesiredDatastoresParams) error {
+	_, err := q.db.ExecContext(ctx, updateDesiredDatastores, pq.Array(arg.DesiredDatastores), arg.ID)
+	return err
 }

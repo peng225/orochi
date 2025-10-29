@@ -4,10 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
 
 	"github.com/peng225/orochi/internal/entity"
 	"github.com/peng225/orochi/internal/gateway/infra/postgresql/sqlc/query"
+	"github.com/peng225/orochi/internal/pkg/psqlutil"
 
 	_ "github.com/lib/pq"
 )
@@ -18,15 +18,7 @@ type DatastoreRepository struct {
 }
 
 func NewDatastoreRepository() *DatastoreRepository {
-	dsn := os.Getenv("DSN")
-	db, err := sql.Open("postgres", dsn)
-	if err != nil {
-		panic(err)
-	}
-	err = db.Ping()
-	if err != nil {
-		panic(err)
-	}
+	db := psqlutil.InitDB()
 	return &DatastoreRepository{
 		db: db,
 		q:  query.New(db),

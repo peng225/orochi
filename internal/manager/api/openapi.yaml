@@ -18,7 +18,7 @@ paths:
         content:
           application/octet-stream:
             schema:
-              $ref: '#/components/schemas/datastoreCreateRequest'
+              $ref: '#/components/schemas/createDatastoreRequest'
       responses:
         '201':
           description: Datastore created successfully
@@ -48,7 +48,7 @@ paths:
 
 components:
   schemas:
-    datastoreCreateRequest:
+    createDatastoreRequest:
       type: object
       properties:
         baseURL:

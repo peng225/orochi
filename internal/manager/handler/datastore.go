@@ -29,7 +29,7 @@ func (dsh *DatastoreHandler) CreateDatastore(w http.ResponseWriter, r *http.Requ
 		slog.Error("Failed to read body.", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-	var req server.DatastoreCreateRequest
+	var req server.CreateDatastoreRequest
 	err = json.Unmarshal(data, &req)
 	if err != nil {
 		slog.Error("Failed to unmarshal body.", "err", err)
