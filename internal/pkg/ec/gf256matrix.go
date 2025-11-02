@@ -56,8 +56,8 @@ func (mat *GF256Matrix) swapRows(i, j int) error {
 		return fmt.Errorf("both i and j must be smaller than numRows: numROws=%d i=%d, j=%d",
 			mat.numRows, i, j)
 	}
-	for k := range len(mat.data) / mat.numRows {
-		mat.data[i*mat.numRows+k], mat.data[j*mat.numRows+k] = mat.data[j*mat.numRows+k], mat.data[i*mat.numRows+k]
+	for k := range mat.NumCols() {
+		mat.data[i*mat.NumCols()+k], mat.data[j*mat.NumCols()+k] = mat.Get(j, k), mat.Get(i, k)
 	}
 	return nil
 }

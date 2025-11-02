@@ -35,9 +35,14 @@ func TestInverse(t *testing.T) {
 			expected: NewGF256MatrixWithData(2, []gf256{1, 0, 0, 1}),
 		},
 		{
-			name:     "other",
+			name:     "other1",
 			m:        NewGF256MatrixWithData(2, []gf256{0x28, 0x3, 0xc8, 0x4}),
 			expected: NewGF256MatrixWithData(2, []gf256{0x81, 0x26, 0x5a, 0x7d}),
+		},
+		{
+			name:     "other2",
+			m:        NewGF256MatrixWithData(2, []gf256{0x0, 0x1, 0x1, 0x4}),
+			expected: NewGF256MatrixWithData(2, []gf256{0x4, 0x1, 0x1, 0}),
 		},
 	}
 	for _, tc := range testCases {
