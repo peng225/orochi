@@ -3,7 +3,6 @@ package postgresql
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 
 	"github.com/peng225/orochi/internal/entity"
@@ -53,12 +52,12 @@ func (omr *ObjectMetadataRepository) GetObjectMetadataByName(
 		BucketID: bucketID,
 	})
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, service.ErrNotFound
-		}
 		return nil, fmt.Errorf("failed to select object metadata: %w", err)
 	}
-	if len(om) != 1 {
+	if len(om) == 0 {
+		return nil, service.ErrNotFound
+	}
+	if len(om) > 1 {
 		// FIXME: need to fix when snapshot is supported.
 		return nil, fmt.Errorf("unsupported situation")
 	}
