@@ -2,7 +2,6 @@ package handler
 
 import (
 	"errors"
-	"io"
 	"log/slog"
 	"net/http"
 
@@ -20,34 +19,6 @@ func NewObjectHandler(os *service.ObjectService) *ObjectHandler {
 	}
 }
 
-func (oh *ObjectHandler) GetObject(w http.ResponseWriter, r *http.Request, bucket server.BucketParam, object server.ObjectParam) {
-	obj, err := oh.os.GetObject(r.Context(), string(object), string(bucket))
-	if err != nil {
-		slog.Error("GetObject failed.", "err", err)
-		switch {
-		case errors.Is(err, service.ErrInvalidParameter):
-			w.WriteHeader(http.StatusBadRequest)
-		case errors.Is(err, service.ErrNotFound):
-			w.WriteHeader(http.StatusNotFound)
-		default:
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-		return
-	}
-	defer obj.Close()
-
-	data, err := io.ReadAll(obj)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	_, err = w.Write(data)
-	if err != nil {
-		slog.Error("Failed to write data.", "err", err)
-		return
-	}
-}
-
 func (oh *ObjectHandler) CreateObject(w http.ResponseWriter, r *http.Request, bucket server.BucketParam, object server.ObjectParam) {
 	defer r.Body.Close()
 	err := oh.os.CreateObject(r.Context(), string(object), string(bucket), r.Body)
@@ -62,4 +33,26 @@ func (oh *ObjectHandler) CreateObject(w http.ResponseWriter, r *http.Request, bu
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
+}
+
+func (oh *ObjectHandler) GetObject(w http.ResponseWriter, r *http.Request, bucket server.BucketParam, object server.ObjectParam) {
+	data, err := oh.os.GetObject(r.Context(), string(object), string(bucket))
+	if err != nil {
+		slog.Error("GetObject failed.", "err", err)
+		switch {
+		case errors.Is(err, service.ErrInvalidParameter):
+			w.WriteHeader(http.StatusBadRequest)
+		case errors.Is(err, service.ErrNotFound):
+			w.WriteHeader(http.StatusNotFound)
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		return
+	}
+
+	_, err = w.Write(data)
+	if err != nil {
+		slog.Error("Failed to write data.", "err", err)
+		return
+	}
 }

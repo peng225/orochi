@@ -59,37 +59,6 @@ func (osvc *ObjectService) Refresh(ctx context.Context) error {
 	return nil
 }
 
-type multiReadCloser struct {
-	readClosers []io.ReadCloser
-	multiReader io.Reader
-}
-
-func newMultiReadCloser(readClosers []io.ReadCloser) *multiReadCloser {
-	readers := make([]io.Reader, len(readClosers))
-	for i, rc := range readClosers {
-		readers[i] = rc
-	}
-	return &multiReadCloser{
-		readClosers: readClosers,
-		multiReader: io.MultiReader(readers...),
-	}
-}
-
-func (mrc *multiReadCloser) Read(p []byte) (n int, err error) {
-	return mrc.multiReader.Read(p)
-}
-
-func (mrc *multiReadCloser) Close() error {
-	var joinedError error
-	for _, rc := range mrc.readClosers {
-		err := rc.Close()
-		if err != nil {
-			joinedError = errors.Join(joinedError, err)
-		}
-	}
-	return joinedError
-}
-
 func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucket string, r io.Reader) error {
 	// FIXME: Should avoid per request refresh for performance.
 	err := osvc.Refresh(ctx)
@@ -137,7 +106,7 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucket string
 	return nil
 }
 
-func (osvc *ObjectService) GetObject(ctx context.Context, name, bucket string) (io.ReadCloser, error) {
+func (osvc *ObjectService) GetObject(ctx context.Context, name, bucket string) ([]byte, error) {
 	om, err := osvc.getObjectMetadataByName(ctx, name, bucket)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get object metadata: %w", err)
@@ -146,17 +115,25 @@ func (osvc *ObjectService) GetObject(ctx context.Context, name, bucket string) (
 	if err != nil {
 		return nil, fmt.Errorf("failed to get location group: %w", err)
 	}
-	dsToData := make(map[int64]io.ReadCloser)
+
 	eg := new(errgroup.Group)
 	// FIXME: remove the 2D1P assumption.
-	for _, ds := range lg.CurrentDatastores[:2] {
+	// FIXME: should decode even if some datastores are down.
+	codes := make([][]byte, 3)
+	for i, ds := range lg.CurrentDatastores[:2] {
+		i := i
 		ds := ds
 		eg.Go(func() error {
-			data, err := osvc.chunkRepos[ds].GetObject(ctx, bucket, name)
+			rc, err := osvc.chunkRepos[ds].GetObject(ctx, bucket, name)
 			if err != nil {
 				return fmt.Errorf("GetObject failed: %w", err)
 			}
-			dsToData[ds] = data
+			defer rc.Close()
+			data, err := io.ReadAll(rc)
+			if err != nil {
+				return fmt.Errorf("failed to read data: %w", err)
+			}
+			codes[i] = data
 			return nil
 		})
 	}
@@ -164,12 +141,12 @@ func (osvc *ObjectService) GetObject(ctx context.Context, name, bucket string) (
 		return nil, fmt.Errorf("failed to get object chunk: %w", err)
 	}
 
-	dataList := make([]io.ReadCloser, 0, len(dsToData))
-	// FIXME: remove the 2D1P assumption.
-	for _, ds := range lg.CurrentDatastores[:2] {
-		dataList = append(dataList, dsToData[ds])
+	m := ec.NewManager(2, 1, minECChunkSizeInByte)
+	data, err := m.Decode(codes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode: %w", err)
 	}
-	return newMultiReadCloser(dataList), nil
+	return data, nil
 }
 
 func (osvc *ObjectService) createObjectMetadata(
