@@ -7,7 +7,45 @@ package query
 
 import (
 	"context"
+
+	"github.com/lib/pq"
 )
+
+const createObjectMetadata = `-- name: CreateObjectMetadata :one
+INSERT INTO object_metadata (
+   name,
+   bucket_id,
+   location_group_id
+) VALUES (
+  $1, $2, $3
+)
+RETURNING id
+`
+
+type CreateObjectMetadataParams struct {
+	Name            string
+	BucketID        int64
+	LocationGroupID int64
+}
+
+func (q *Queries) CreateObjectMetadata(ctx context.Context, arg CreateObjectMetadataParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, createObjectMetadata, arg.Name, arg.BucketID, arg.LocationGroupID)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const selectBucketByName = `-- name: SelectBucketByName :one
+SELECT id, name FROM bucket
+WHERE name = $1
+`
+
+func (q *Queries) SelectBucketByName(ctx context.Context, name string) (Bucket, error) {
+	row := q.db.QueryRowContext(ctx, selectBucketByName, name)
+	var i Bucket
+	err := row.Scan(&i.ID, &i.Name)
+	return i, err
+}
 
 const selectDatastores = `-- name: SelectDatastores :many
 SELECT id, base_url FROM datastore
@@ -23,6 +61,83 @@ func (q *Queries) SelectDatastores(ctx context.Context) ([]Datastore, error) {
 	for rows.Next() {
 		var i Datastore
 		if err := rows.Scan(&i.ID, &i.BaseUrl); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const selectLocationGroup = `-- name: SelectLocationGroup :one
+SELECT id, current_datastores, desired_datastores from location_group
+WHERE id = $1
+`
+
+func (q *Queries) SelectLocationGroup(ctx context.Context, id int64) (LocationGroup, error) {
+	row := q.db.QueryRowContext(ctx, selectLocationGroup, id)
+	var i LocationGroup
+	err := row.Scan(&i.ID, pq.Array(&i.CurrentDatastores), pq.Array(&i.DesiredDatastores))
+	return i, err
+}
+
+const selectLocationGroups = `-- name: SelectLocationGroups :many
+SELECT id, current_datastores, desired_datastores from location_group
+`
+
+func (q *Queries) SelectLocationGroups(ctx context.Context) ([]LocationGroup, error) {
+	rows, err := q.db.QueryContext(ctx, selectLocationGroups)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []LocationGroup
+	for rows.Next() {
+		var i LocationGroup
+		if err := rows.Scan(&i.ID, pq.Array(&i.CurrentDatastores), pq.Array(&i.DesiredDatastores)); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const selectObjectMetadataByName = `-- name: SelectObjectMetadataByName :many
+SELECT id, name, bucket_id, location_group_id FROM object_metadata
+WHERE name = $1 AND bucket_id = $2
+`
+
+type SelectObjectMetadataByNameParams struct {
+	Name     string
+	BucketID int64
+}
+
+func (q *Queries) SelectObjectMetadataByName(ctx context.Context, arg SelectObjectMetadataByNameParams) ([]ObjectMetadatum, error) {
+	rows, err := q.db.QueryContext(ctx, selectObjectMetadataByName, arg.Name, arg.BucketID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ObjectMetadatum
+	for rows.Next() {
+		var i ObjectMetadatum
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.BucketID,
+			&i.LocationGroupID,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

@@ -3,6 +3,7 @@ package service
 import "fmt"
 
 var (
-	ErrBucketNotFound error = fmt.Errorf("bucket not found")
-	ErrObjectNotFound error = fmt.Errorf("object not found")
+	ErrNotFound              error = fmt.Errorf("not found")
+	ErrInvalidParameter      error = fmt.Errorf("invalid parameter")
+	ErrLocationGroupNotFound error = fmt.Errorf("location group not found")
 )

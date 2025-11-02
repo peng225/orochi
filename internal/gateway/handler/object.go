@@ -21,13 +21,13 @@ func NewObjectHandler(os *service.ObjectService) *ObjectHandler {
 }
 
 func (oh *ObjectHandler) GetObject(w http.ResponseWriter, r *http.Request, bucket server.BucketParam, object server.ObjectParam) {
-	obj, err := oh.os.GetObject(r.Context(), string(bucket), string(object))
+	obj, err := oh.os.GetObject(r.Context(), string(object), string(bucket))
 	if err != nil {
 		slog.Error("GetObject failed.", "err", err)
 		switch {
-		case errors.Is(err, service.ErrBucketNotFound):
+		case errors.Is(err, service.ErrInvalidParameter):
 			w.WriteHeader(http.StatusBadRequest)
-		case errors.Is(err, service.ErrObjectNotFound):
+		case errors.Is(err, service.ErrNotFound):
 			w.WriteHeader(http.StatusNotFound)
 		default:
 			w.WriteHeader(http.StatusInternalServerError)
@@ -50,11 +50,11 @@ func (oh *ObjectHandler) GetObject(w http.ResponseWriter, r *http.Request, bucke
 
 func (oh *ObjectHandler) CreateObject(w http.ResponseWriter, r *http.Request, bucket server.BucketParam, object server.ObjectParam) {
 	defer r.Body.Close()
-	err := oh.os.CreateObject(r.Context(), string(bucket), string(object), r.Body)
+	err := oh.os.CreateObject(r.Context(), string(object), string(bucket), r.Body)
 	if err != nil {
 		slog.Error("CreateObject failed.", "err", err)
 		switch {
-		case errors.Is(err, service.ErrBucketNotFound):
+		case errors.Is(err, service.ErrInvalidParameter):
 			w.WriteHeader(http.StatusBadRequest)
 		default:
 			w.WriteHeader(http.StatusInternalServerError)

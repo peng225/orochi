@@ -33,7 +33,7 @@ func (c *Client) GetObject(ctx context.Context, bucket, object string) (io.ReadC
 	case http.StatusOK:
 		// Do nothing.
 	case http.StatusNotFound:
-		return nil, service.ErrObjectNotFound
+		return nil, service.ErrNotFound
 	default:
 		return nil, fmt.Errorf("GetObject returned unexpected status code: %d", res.StatusCode)
 	}

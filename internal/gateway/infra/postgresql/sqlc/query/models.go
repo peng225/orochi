@@ -19,3 +19,10 @@ type LocationGroup struct {
 	CurrentDatastores []int64
 	DesiredDatastores []int64
 }
+
+type ObjectMetadatum struct {
+	ID              int64
+	Name            string
+	BucketID        int64
+	LocationGroupID int64
+}
