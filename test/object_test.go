@@ -9,7 +9,6 @@ import (
 
 	gwclient "github.com/peng225/orochi/internal/gateway/api/client"
 	mgrclient "github.com/peng225/orochi/internal/manager/api/client"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,6 +24,11 @@ func prepare(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusCreated, res.StatusCode)
 	}
+
+	data := `{"name": "test-bucket"}`
+	res, err := c.CreateBucketWithBody(t.Context(), "application/json", strings.NewReader(data))
+	require.NoError(t, err)
+	require.Equal(t, http.StatusCreated, res.StatusCode)
 }
 
 func TestObjectCreateGet_Success(t *testing.T) {
@@ -38,7 +42,7 @@ func TestObjectCreateGet_Success(t *testing.T) {
 	createRes, err := c.CreateObjectWithBody(t.Context(), bucket, object,
 		"application/octet-stream", strings.NewReader("test-data"))
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusCreated, createRes.StatusCode)
+	require.Equal(t, http.StatusCreated, createRes.StatusCode)
 
 	getRes, err := c.GetObject(t.Context(), bucket, object)
 	require.NoError(t, err)
