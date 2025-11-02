@@ -48,8 +48,8 @@ func offset(a int) int {
 
 // ref. https://en.wikipedia.org/wiki/Ancient_Egyptian_multiplication#Russian_peasant_multiplication
 func (g gf256) calcMul(x gf256) gf256 {
-	var a uint16 = uint16(g)
-	var b uint16 = uint16(x)
+	var a = uint16(g)
+	var b = uint16(x)
 	var p uint16 = 0
 	for range 8 {
 		if (b & 1) != 0 {
