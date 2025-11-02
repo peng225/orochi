@@ -79,30 +79,41 @@ func (m *Manager) Encode(data []byte) ([][]byte, error) {
 	result := make([][]byte, 0)
 	dataSize := uint32(len(data))
 	// Set data chunks.
-	if len(data)+headerSizeInByte*m.numData < m.numData*m.minChunkSizeInByte {
+	if len(data)+headerSizeInByte < m.numData*m.minChunkSizeInByte {
+		// Write the header at the top of the first data chunk.
+		chunkEndOffset := min(m.minChunkSizeInByte-headerSizeInByte, len(data))
+		buf := make([]byte, headerSizeInByte, headerSizeInByte+chunkEndOffset)
+		binary.LittleEndian.PutUint32(buf, dataSize)
+		buf = append(buf, data[0:chunkEndOffset]...)
+		result = append(result, buf)
+		data = data[chunkEndOffset:]
 		for len(data) != 0 {
-			chunkEndOffset := min(m.minChunkSizeInByte-headerSizeInByte, len(data))
-			buf := make([]byte, headerSizeInByte, headerSizeInByte+chunkEndOffset)
-			binary.LittleEndian.PutUint32(buf, dataSize)
+			chunkEndOffset := min(m.minChunkSizeInByte, len(data))
+			buf := make([]byte, 0, chunkEndOffset)
 			buf = append(buf, data[0:chunkEndOffset]...)
 			result = append(result, buf)
 			data = data[chunkEndOffset:]
 		}
 		for range m.numData - len(result) {
-			buf := make([]byte, headerSizeInByte)
-			binary.LittleEndian.PutUint32(buf, dataSize)
+			buf := make([]byte, 0)
 			result = append(result, buf)
 		}
 	} else {
 		chunkSize := int(
 			math.Ceil(
-				float64(len(data))/float64(m.numData),
+				(float64(len(data)) + headerSizeInByte) / float64(m.numData),
 			),
-		) + headerSizeInByte
+		)
+		// Write the header at the top of the first data chunk.
+		chunkEndOffset := min(chunkSize-headerSizeInByte, len(data))
+		buf := make([]byte, headerSizeInByte, headerSizeInByte+chunkEndOffset)
+		binary.LittleEndian.PutUint32(buf, dataSize)
+		buf = append(buf, data[0:chunkEndOffset]...)
+		result = append(result, buf)
+		data = data[chunkEndOffset:]
 		for len(data) != 0 {
-			chunkEndOffset := min(chunkSize-headerSizeInByte, len(data))
-			buf := make([]byte, headerSizeInByte, headerSizeInByte+chunkEndOffset)
-			binary.LittleEndian.PutUint32(buf, dataSize)
+			chunkEndOffset := min(chunkSize, len(data))
+			buf := make([]byte, 0, chunkEndOffset)
 			buf = append(buf, data[0:chunkEndOffset]...)
 			result = append(result, buf)
 			data = data[chunkEndOffset:]
@@ -141,7 +152,7 @@ func (m *Manager) Decode(codes [][]byte) ([]byte, error) {
 	missingChunkIDs := make(map[int]struct{})
 	missingDataChunkExists := false
 	for i, v := range codes {
-		if len(v) == 0 {
+		if v == nil {
 			missingChunkIDs[i] = struct{}{}
 			if i < m.numData {
 				missingDataChunkExists = true
@@ -160,10 +171,15 @@ func (m *Manager) Decode(codes [][]byte) ([]byte, error) {
 			chunkSize = len(c)
 		}
 	}
-	data := make([]byte, 0, (chunkSize-headerSizeInByte)*m.numData)
+	data := make([]byte, 0, chunkSize*m.numData-headerSizeInByte)
 	if !missingDataChunkExists {
 		for i := range m.numData {
-			data = append(data, codes[i][headerSizeInByte:]...)
+			startOffset := 0
+			// Eliminate the header from the first data chunk.
+			if i == 0 {
+				startOffset = headerSizeInByte
+			}
+			data = append(data, codes[i][startOffset:]...)
 		}
 		return data, nil
 	}
@@ -213,7 +229,12 @@ func (m *Manager) Decode(codes [][]byte) ([]byte, error) {
 	}
 
 	for i := range m.numData {
-		data = append(data, codes[i][headerSizeInByte:]...)
+		startOffset := 0
+		// Eliminate the header from the first data chunk.
+		if i == 0 {
+			startOffset = headerSizeInByte
+		}
+		data = append(data, codes[i][startOffset:]...)
 	}
 	dataSize := binary.LittleEndian.Uint32(codes[0][:headerSizeInByte])
 	return data[:dataSize], nil
