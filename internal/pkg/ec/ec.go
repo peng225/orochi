@@ -11,7 +11,6 @@ import (
 
 var (
 	ErrInvalidParameter    error = errors.New("invalid parameter")
-	ErrTooLargeData        error = errors.New("too large data")
 	ErrTooManyMissingCodes error = errors.New("too many missing codes")
 )
 
@@ -23,13 +22,11 @@ type Manager struct {
 	numData            int
 	numParity          int
 	minChunkSizeInByte int
-	maxDataSizeInByte  int64
 	generatorMatrix    *GF256Matrix
 }
 
 func NewManager(
 	numData, numParity, minChunkSizeInByte int,
-	maxDataSizeInByte int64,
 ) *Manager {
 	if numData <= 0 {
 		panic("numData should be positive")
@@ -39,9 +36,6 @@ func NewManager(
 	}
 	if minChunkSizeInByte <= 0 {
 		panic("minChunkSizeInByte should be positive")
-	}
-	if maxDataSizeInByte <= 0 {
-		panic("maxDataSizeinByte should be positive")
 	}
 	// Calc parity blocks.
 	// Choose 1, a, a^2, ... a^(d+p-1) as evaluation points.
@@ -66,16 +60,11 @@ func NewManager(
 		numData:            numData,
 		numParity:          numParity,
 		minChunkSizeInByte: minChunkSizeInByte,
-		maxDataSizeInByte:  maxDataSizeInByte,
 		generatorMatrix:    generatorMatrix,
 	}
 }
 
 func (m *Manager) Encode(data []byte) ([][]byte, error) {
-	if len(data) > int(m.maxDataSizeInByte) {
-		return nil, ErrTooLargeData
-	}
-
 	result := make([][]byte, 0)
 	dataSize := uint32(len(data))
 	// Set data chunks.

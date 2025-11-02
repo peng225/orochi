@@ -55,7 +55,7 @@ func TestEncodeDecode_NoMissingChunks(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			m := NewManager(tc.numData, tc.numParity,
-				tc.minChunkSizeInByte, 1000)
+				tc.minChunkSizeInByte)
 			codes, err := m.Encode(tc.data)
 			require.NoError(t, err)
 			require.Len(t, codes, tc.numData+tc.numParity)
@@ -145,7 +145,7 @@ func TestEncodeDecode_RecoverFromMissingChunks(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			m := NewManager(tc.numData, tc.numParity,
-				tc.minChunkSizeInByte, 1000)
+				tc.minChunkSizeInByte)
 			codes, err := m.Encode(tc.data)
 			require.NoError(t, err)
 			require.Len(t, codes, tc.numData+tc.numParity)
