@@ -18,6 +18,7 @@ type DatastoreRepository interface {
 type ChunkRepository interface {
 	CreateObject(ctx context.Context, bucket, object string, data io.Reader) error
 	GetObject(ctx context.Context, bucket, object string) (io.ReadCloser, error)
+	DeleteObject(ctx context.Context, bucket, object string) error
 }
 
 type ChunkRepositoryFactory interface {
@@ -33,6 +34,7 @@ type CreateObjectMetadataRequest struct {
 type ObjectMetadataRepository interface {
 	CreateObjectMetadata(ctx context.Context, req *CreateObjectMetadataRequest) (int64, error)
 	GetObjectMetadataByName(ctx context.Context, name string, bucketID int64) (*entity.ObjectMetadata, error)
+	DeleteObjectMetadata(ctx context.Context, id int64) error
 }
 
 type BucketRepository interface {

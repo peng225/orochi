@@ -56,3 +56,18 @@ func (oh *ObjectHandler) GetObject(w http.ResponseWriter, r *http.Request, bucke
 		return
 	}
 }
+
+func (oh *ObjectHandler) DeleteObject(w http.ResponseWriter, r *http.Request, bucket server.Bucket, object server.Object) {
+	err := oh.os.DeleteObject(r.Context(), string(object), string(bucket), r.Body)
+	if err != nil {
+		slog.Error("DeleteObject failed.", "err", err)
+		switch {
+		case errors.Is(err, service.ErrInvalidParameter):
+			w.WriteHeader(http.StatusBadRequest)
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

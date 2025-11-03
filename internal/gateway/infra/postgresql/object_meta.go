@@ -68,3 +68,11 @@ func (omr *ObjectMetadataRepository) GetObjectMetadataByName(
 		LocationGroupID: om[0].LocationGroupID,
 	}, nil
 }
+
+func (omr *ObjectMetadataRepository) DeleteObjectMetadata(ctx context.Context, id int64) error {
+	err := omr.q.DeleteObjectMetadata(ctx, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete object metadata: %w", err)
+	}
+	return nil
+}

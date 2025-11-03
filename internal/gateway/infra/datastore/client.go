@@ -24,6 +24,20 @@ func NewClient(baseURL string) *Client {
 	}
 }
 
+func (c *Client) CreateObject(ctx context.Context, bucket, object string, data io.Reader) error {
+	res, err := c.c.CreateObjectWithBody(ctx, bucket, object, "application/octet-stream", data)
+	if err != nil {
+		return fmt.Errorf("CreateObject failed: %w", err)
+	}
+	switch res.StatusCode {
+	case http.StatusCreated:
+		// Do nothing.
+	default:
+		return fmt.Errorf("CreateObject returned unexpected status code: %d", res.StatusCode)
+	}
+	return nil
+}
+
 func (c *Client) GetObject(ctx context.Context, bucket, object string) (io.ReadCloser, error) {
 	res, err := c.c.GetObject(ctx, bucket, object)
 	if err != nil {
@@ -40,16 +54,16 @@ func (c *Client) GetObject(ctx context.Context, bucket, object string) (io.ReadC
 	return res.Body, nil
 }
 
-func (c *Client) CreateObject(ctx context.Context, bucket, object string, data io.Reader) error {
-	res, err := c.c.CreateObjectWithBody(ctx, bucket, object, "application/octet-stream", data)
+func (c *Client) DeleteObject(ctx context.Context, bucket, object string) error {
+	res, err := c.c.DeleteObject(ctx, bucket, object)
 	if err != nil {
-		return fmt.Errorf("CreateObject failed: %w", err)
+		return fmt.Errorf("DeleteObject failed: %w", err)
 	}
 	switch res.StatusCode {
-	case http.StatusCreated:
+	case http.StatusNoContent:
 		// Do nothing.
 	default:
-		return fmt.Errorf("CreateObject returned unexpected status code: %d", res.StatusCode)
+		return fmt.Errorf("DeleteObject returned unexpected status code: %d", res.StatusCode)
 	}
 	return nil
 }

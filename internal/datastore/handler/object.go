@@ -19,6 +19,16 @@ func NewObjectHandler(os *service.ObjectService) *ObjectHandler {
 	}
 }
 
+func (oh *ObjectHandler) CreateObject(w http.ResponseWriter, r *http.Request, bucket server.Bucket, object server.Object) {
+	defer r.Body.Close()
+	err := oh.os.CreateObject(string(bucket), string(object), r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+}
+
 func (oh *ObjectHandler) GetObject(w http.ResponseWriter, r *http.Request, bucket server.Bucket, object server.Object) {
 	data, err := oh.os.GetObject(string(bucket), string(object))
 	if err != nil {
@@ -38,12 +48,16 @@ func (oh *ObjectHandler) GetObject(w http.ResponseWriter, r *http.Request, bucke
 	}
 }
 
-func (oh *ObjectHandler) CreateObject(w http.ResponseWriter, r *http.Request, bucket server.Bucket, object server.Object) {
-	defer r.Body.Close()
-	err := oh.os.CreateObject(string(bucket), string(object), r.Body)
+func (oh *ObjectHandler) DeleteObject(w http.ResponseWriter, r *http.Request, bucket server.Bucket, object server.Object) {
+	err := oh.os.DeleteObject(string(bucket), string(object))
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		switch {
+		case errors.Is(err, service.ErrObjectNotFound):
+			w.WriteHeader(http.StatusNotFound)
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+		}
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(http.StatusNoContent)
 }

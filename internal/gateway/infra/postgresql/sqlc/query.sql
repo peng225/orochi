@@ -15,6 +15,10 @@ RETURNING id;
 SELECT * FROM object_metadata
 WHERE name = $1 AND bucket_id = $2;
 
+-- name: DeleteObjectMetadata :exec
+SELECT * FROM object_metadata
+WHERE id = $1;
+
 -- name: SelectLocationGroups :many
 SELECT * from location_group;
 

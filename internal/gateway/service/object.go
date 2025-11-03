@@ -197,3 +197,32 @@ func (osvc *ObjectService) getObjectMetadataByName(
 	}
 	return om, nil
 }
+
+func (osvc *ObjectService) DeleteObject(ctx context.Context, name, bucket string, r io.Reader) error {
+	om, err := osvc.getObjectMetadataByName(ctx, name, bucket)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return nil
+		}
+		return fmt.Errorf("failed to get object metadata by name: %w", err)
+	}
+	lg, err := osvc.lgRepo.GetLocationGroup(ctx, om.LocationGroupID)
+	if err != nil {
+		return fmt.Errorf("failed to get location group: %w", err)
+	}
+	if !slices.Equal(lg.CurrentDatastores, lg.DesiredDatastores) {
+		// FIXME: double delete.
+		return fmt.Errorf("unsupported behavior")
+	}
+	for _, ds := range lg.CurrentDatastores {
+		err = osvc.chunkRepos[ds].DeleteObject(ctx, bucket, name)
+		if err != nil {
+			return fmt.Errorf("DeleteObject failed: %w", err)
+		}
+	}
+	err = osvc.omRepo.DeleteObjectMetadata(ctx, om.ID)
+	if err != nil {
+		return fmt.Errorf("failed to delete object metadata: %w", err)
+	}
+	return nil
+}

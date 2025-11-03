@@ -52,3 +52,29 @@ func TestObjectCreateGet_Success(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "test-data", string(data))
 }
+
+func TestObjectDelete_Success(t *testing.T) {
+	prepare(t)
+
+	c, err := gwclient.NewClient("http://localhost:8081")
+	require.NoError(t, err)
+
+	bucket := "test-bucket"
+	object := "test-object2"
+	createRes, err := c.CreateObjectWithBody(t.Context(), bucket, object,
+		"application/octet-stream", strings.NewReader("test-data"))
+	require.NoError(t, err)
+	require.Equal(t, http.StatusCreated, createRes.StatusCode)
+
+	delRes, err := c.DeleteObject(t.Context(), bucket, object)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusNoContent, delRes.StatusCode)
+	// Check idempotency.
+	delRes, err = c.DeleteObject(t.Context(), bucket, object)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusNoContent, delRes.StatusCode)
+
+	getRes, err := c.GetObject(t.Context(), bucket, object)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusNotFound, getRes.StatusCode)
+}

@@ -20,6 +20,9 @@ type Object = string
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Delete a object
+	// (DELETE /{bucket}/{object})
+	DeleteObject(w http.ResponseWriter, r *http.Request, bucket Bucket, object Object)
 	// Get a object
 	// (GET /{bucket}/{object})
 	GetObject(w http.ResponseWriter, r *http.Request, bucket Bucket, object Object)
@@ -36,6 +39,40 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// DeleteObject operation middleware
+func (siw *ServerInterfaceWrapper) DeleteObject(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "bucket" -------------
+	var bucket Bucket
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bucket", r.PathValue("bucket"), &bucket, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bucket", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "object" -------------
+	var object Object
+
+	err = runtime.BindStyledParameterWithOptions("simple", "object", r.PathValue("object"), &object, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "object", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteObject(w, r, bucket, object)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // GetObject operation middleware
 func (siw *ServerInterfaceWrapper) GetObject(w http.ResponseWriter, r *http.Request) {
@@ -225,6 +262,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	m.HandleFunc("DELETE "+options.BaseURL+"/{bucket}/{object}", wrapper.DeleteObject)
 	m.HandleFunc("GET "+options.BaseURL+"/{bucket}/{object}", wrapper.GetObject)
 	m.HandleFunc("PUT "+options.BaseURL+"/{bucket}/{object}", wrapper.CreateObject)
 

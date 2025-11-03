@@ -35,6 +35,16 @@ func (q *Queries) CreateObjectMetadata(ctx context.Context, arg CreateObjectMeta
 	return id, err
 }
 
+const deleteObjectMetadata = `-- name: DeleteObjectMetadata :exec
+SELECT id, name, bucket_id, location_group_id FROM object_metadata
+WHERE id = $1
+`
+
+func (q *Queries) DeleteObjectMetadata(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteObjectMetadata, id)
+	return err
+}
+
 const selectBucketByName = `-- name: SelectBucketByName :one
 SELECT id, name FROM bucket
 WHERE name = $1

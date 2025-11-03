@@ -48,6 +48,18 @@ paths:
         '404':
           description: Object not found
 
+    delete:
+      summary: Delete a object
+      operationId: deleteObject
+      parameters:
+        - $ref: '#/components/parameters/bucket'
+        - $ref: '#/components/parameters/object'
+      responses:
+        '204':
+          description: Object deleted successfully
+        '400':
+          description: Bucket should be created first
+
 components:
   parameters:
     bucket:
