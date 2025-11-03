@@ -12,20 +12,20 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
-// BucketParam defines model for bucketParam.
-type BucketParam = string
+// Bucket defines model for bucket.
+type Bucket = string
 
-// ObjectParam defines model for objectParam.
-type ObjectParam = string
+// Object defines model for object.
+type Object = string
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Get a object
 	// (GET /{bucket}/{object})
-	GetObject(w http.ResponseWriter, r *http.Request, bucket BucketParam, object ObjectParam)
+	GetObject(w http.ResponseWriter, r *http.Request, bucket Bucket, object Object)
 	// Create a object
 	// (PUT /{bucket}/{object})
-	CreateObject(w http.ResponseWriter, r *http.Request, bucket BucketParam, object ObjectParam)
+	CreateObject(w http.ResponseWriter, r *http.Request, bucket Bucket, object Object)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -43,7 +43,7 @@ func (siw *ServerInterfaceWrapper) GetObject(w http.ResponseWriter, r *http.Requ
 	var err error
 
 	// ------------- Path parameter "bucket" -------------
-	var bucket BucketParam
+	var bucket Bucket
 
 	err = runtime.BindStyledParameterWithOptions("simple", "bucket", r.PathValue("bucket"), &bucket, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
@@ -52,7 +52,7 @@ func (siw *ServerInterfaceWrapper) GetObject(w http.ResponseWriter, r *http.Requ
 	}
 
 	// ------------- Path parameter "object" -------------
-	var object ObjectParam
+	var object Object
 
 	err = runtime.BindStyledParameterWithOptions("simple", "object", r.PathValue("object"), &object, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
@@ -77,7 +77,7 @@ func (siw *ServerInterfaceWrapper) CreateObject(w http.ResponseWriter, r *http.R
 	var err error
 
 	// ------------- Path parameter "bucket" -------------
-	var bucket BucketParam
+	var bucket Bucket
 
 	err = runtime.BindStyledParameterWithOptions("simple", "bucket", r.PathValue("bucket"), &bucket, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
@@ -86,7 +86,7 @@ func (siw *ServerInterfaceWrapper) CreateObject(w http.ResponseWriter, r *http.R
 	}
 
 	// ------------- Path parameter "object" -------------
-	var object ObjectParam
+	var object Object
 
 	err = runtime.BindStyledParameterWithOptions("simple", "object", r.PathValue("object"), &object, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {

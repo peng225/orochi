@@ -4,6 +4,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -33,6 +34,12 @@ type Datastore struct {
 
 // DatastoreID defines model for datastoreID.
 type DatastoreID = int64
+
+// CreateBucketJSONRequestBody defines body for CreateBucket for application/json ContentType.
+type CreateBucketJSONRequestBody = CreateBucketRequest
+
+// CreateDatastoreJSONRequestBody defines body for CreateDatastore for application/json ContentType.
+type CreateDatastoreJSONRequestBody = CreateDatastoreRequest
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
@@ -110,8 +117,12 @@ type ClientInterface interface {
 	// CreateBucketWithBody request with any body
 	CreateBucketWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	CreateBucket(ctx context.Context, body CreateBucketJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// CreateDatastoreWithBody request with any body
 	CreateDatastoreWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	CreateDatastore(ctx context.Context, body CreateDatastoreJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetDatastore request
 	GetDatastore(ctx context.Context, id DatastoreID, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -119,6 +130,18 @@ type ClientInterface interface {
 
 func (c *Client) CreateBucketWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateBucketRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateBucket(ctx context.Context, body CreateBucketJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateBucketRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -141,6 +164,18 @@ func (c *Client) CreateDatastoreWithBody(ctx context.Context, contentType string
 	return c.Client.Do(req)
 }
 
+func (c *Client) CreateDatastore(ctx context.Context, body CreateDatastoreJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateDatastoreRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) GetDatastore(ctx context.Context, id DatastoreID, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetDatastoreRequest(c.Server, id)
 	if err != nil {
@@ -151,6 +186,17 @@ func (c *Client) GetDatastore(ctx context.Context, id DatastoreID, reqEditors ..
 		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+// NewCreateBucketRequest calls the generic CreateBucket builder with application/json body
+func NewCreateBucketRequest(server string, body CreateBucketJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateBucketRequestWithBody(server, "application/json", bodyReader)
 }
 
 // NewCreateBucketRequestWithBody generates requests for CreateBucket with any type of body
@@ -180,6 +226,17 @@ func NewCreateBucketRequestWithBody(server string, contentType string, body io.R
 	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
+}
+
+// NewCreateDatastoreRequest calls the generic CreateDatastore builder with application/json body
+func NewCreateDatastoreRequest(server string, body CreateDatastoreJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateDatastoreRequestWithBody(server, "application/json", bodyReader)
 }
 
 // NewCreateDatastoreRequestWithBody generates requests for CreateDatastore with any type of body
@@ -291,8 +348,12 @@ type ClientWithResponsesInterface interface {
 	// CreateBucketWithBodyWithResponse request with any body
 	CreateBucketWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateBucketResponse, error)
 
+	CreateBucketWithResponse(ctx context.Context, body CreateBucketJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateBucketResponse, error)
+
 	// CreateDatastoreWithBodyWithResponse request with any body
 	CreateDatastoreWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateDatastoreResponse, error)
+
+	CreateDatastoreWithResponse(ctx context.Context, body CreateDatastoreJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateDatastoreResponse, error)
 
 	// GetDatastoreWithResponse request
 	GetDatastoreWithResponse(ctx context.Context, id DatastoreID, reqEditors ...RequestEditorFn) (*GetDatastoreResponse, error)
@@ -371,9 +432,25 @@ func (c *ClientWithResponses) CreateBucketWithBodyWithResponse(ctx context.Conte
 	return ParseCreateBucketResponse(rsp)
 }
 
+func (c *ClientWithResponses) CreateBucketWithResponse(ctx context.Context, body CreateBucketJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateBucketResponse, error) {
+	rsp, err := c.CreateBucket(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateBucketResponse(rsp)
+}
+
 // CreateDatastoreWithBodyWithResponse request with arbitrary body returning *CreateDatastoreResponse
 func (c *ClientWithResponses) CreateDatastoreWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateDatastoreResponse, error) {
 	rsp, err := c.CreateDatastoreWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateDatastoreResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateDatastoreWithResponse(ctx context.Context, body CreateDatastoreJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateDatastoreResponse, error) {
+	rsp, err := c.CreateDatastore(ctx, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}

@@ -14,11 +14,11 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
-// BucketParam defines model for bucketParam.
-type BucketParam = string
+// Bucket defines model for bucket.
+type Bucket = string
 
-// ObjectParam defines model for objectParam.
-type ObjectParam = string
+// Object defines model for object.
+type Object = string
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
@@ -94,13 +94,13 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 // The interface specification for the client above.
 type ClientInterface interface {
 	// GetObject request
-	GetObject(ctx context.Context, bucket BucketParam, object ObjectParam, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetObject(ctx context.Context, bucket Bucket, object Object, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateObjectWithBody request with any body
-	CreateObjectWithBody(ctx context.Context, bucket BucketParam, object ObjectParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateObjectWithBody(ctx context.Context, bucket Bucket, object Object, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
-func (c *Client) GetObject(ctx context.Context, bucket BucketParam, object ObjectParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetObject(ctx context.Context, bucket Bucket, object Object, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetObjectRequest(c.Server, bucket, object)
 	if err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ func (c *Client) GetObject(ctx context.Context, bucket BucketParam, object Objec
 	return c.Client.Do(req)
 }
 
-func (c *Client) CreateObjectWithBody(ctx context.Context, bucket BucketParam, object ObjectParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) CreateObjectWithBody(ctx context.Context, bucket Bucket, object Object, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateObjectRequestWithBody(c.Server, bucket, object, contentType, body)
 	if err != nil {
 		return nil, err
@@ -125,7 +125,7 @@ func (c *Client) CreateObjectWithBody(ctx context.Context, bucket BucketParam, o
 }
 
 // NewGetObjectRequest generates requests for GetObject
-func NewGetObjectRequest(server string, bucket BucketParam, object ObjectParam) (*http.Request, error) {
+func NewGetObjectRequest(server string, bucket Bucket, object Object) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -166,7 +166,7 @@ func NewGetObjectRequest(server string, bucket BucketParam, object ObjectParam) 
 }
 
 // NewCreateObjectRequestWithBody generates requests for CreateObject with any type of body
-func NewCreateObjectRequestWithBody(server string, bucket BucketParam, object ObjectParam, contentType string, body io.Reader) (*http.Request, error) {
+func NewCreateObjectRequestWithBody(server string, bucket Bucket, object Object, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -252,10 +252,10 @@ func WithBaseURL(baseURL string) ClientOption {
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
 	// GetObjectWithResponse request
-	GetObjectWithResponse(ctx context.Context, bucket BucketParam, object ObjectParam, reqEditors ...RequestEditorFn) (*GetObjectResponse, error)
+	GetObjectWithResponse(ctx context.Context, bucket Bucket, object Object, reqEditors ...RequestEditorFn) (*GetObjectResponse, error)
 
 	// CreateObjectWithBodyWithResponse request with any body
-	CreateObjectWithBodyWithResponse(ctx context.Context, bucket BucketParam, object ObjectParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateObjectResponse, error)
+	CreateObjectWithBodyWithResponse(ctx context.Context, bucket Bucket, object Object, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateObjectResponse, error)
 }
 
 type GetObjectResponse struct {
@@ -301,7 +301,7 @@ func (r CreateObjectResponse) StatusCode() int {
 }
 
 // GetObjectWithResponse request returning *GetObjectResponse
-func (c *ClientWithResponses) GetObjectWithResponse(ctx context.Context, bucket BucketParam, object ObjectParam, reqEditors ...RequestEditorFn) (*GetObjectResponse, error) {
+func (c *ClientWithResponses) GetObjectWithResponse(ctx context.Context, bucket Bucket, object Object, reqEditors ...RequestEditorFn) (*GetObjectResponse, error) {
 	rsp, err := c.GetObject(ctx, bucket, object, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -310,7 +310,7 @@ func (c *ClientWithResponses) GetObjectWithResponse(ctx context.Context, bucket 
 }
 
 // CreateObjectWithBodyWithResponse request with arbitrary body returning *CreateObjectResponse
-func (c *ClientWithResponses) CreateObjectWithBodyWithResponse(ctx context.Context, bucket BucketParam, object ObjectParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateObjectResponse, error) {
+func (c *ClientWithResponses) CreateObjectWithBodyWithResponse(ctx context.Context, bucket Bucket, object Object, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateObjectResponse, error) {
 	rsp, err := c.CreateObjectWithBody(ctx, bucket, object, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err

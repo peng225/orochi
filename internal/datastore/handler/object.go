@@ -19,7 +19,7 @@ func NewObjectHandler(os *service.ObjectService) *ObjectHandler {
 	}
 }
 
-func (oh *ObjectHandler) GetObject(w http.ResponseWriter, r *http.Request, bucket server.BucketParam, object server.ObjectParam) {
+func (oh *ObjectHandler) GetObject(w http.ResponseWriter, r *http.Request, bucket server.Bucket, object server.Object) {
 	data, err := oh.os.GetObject(string(bucket), string(object))
 	if err != nil {
 		switch {
@@ -38,7 +38,7 @@ func (oh *ObjectHandler) GetObject(w http.ResponseWriter, r *http.Request, bucke
 	}
 }
 
-func (oh *ObjectHandler) CreateObject(w http.ResponseWriter, r *http.Request, bucket server.BucketParam, object server.ObjectParam) {
+func (oh *ObjectHandler) CreateObject(w http.ResponseWriter, r *http.Request, bucket server.Bucket, object server.Object) {
 	defer r.Body.Close()
 	err := oh.os.CreateObject(string(bucket), string(object), r.Body)
 	if err != nil {

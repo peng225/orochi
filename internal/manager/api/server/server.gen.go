@@ -31,6 +31,12 @@ type Datastore struct {
 // DatastoreID defines model for datastoreID.
 type DatastoreID = int64
 
+// CreateBucketJSONRequestBody defines body for CreateBucket for application/json ContentType.
+type CreateBucketJSONRequestBody = CreateBucketRequest
+
+// CreateDatastoreJSONRequestBody defines body for CreateDatastore for application/json ContentType.
+type CreateDatastoreJSONRequestBody = CreateDatastoreRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Create a bucket
