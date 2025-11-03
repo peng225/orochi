@@ -16,7 +16,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/octet-stream:
+          application/json:
             schema:
               $ref: '#/components/schemas/createDatastoreRequest'
       responses:
@@ -44,7 +44,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/datastore'
         '404':
-          description: DataStore not found
+          description: Datastore not found
   /bucket:
     post:
       summary: Create a bucket
@@ -52,7 +52,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/octet-stream:
+          application/json:
             schema:
               $ref: '#/components/schemas/createBucketRequest'
       responses:

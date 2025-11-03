@@ -5,7 +5,6 @@ BINDIR := bin
 GOLANGCI_LINT_VERSION := v2.5.0
 GOLANGCI_LINT := $(BINDIR)/golangci-lint-$(GOLANGCI_LINT_VERSION)
 
-
 .PHONY: build
 build:
 	CGO_ENABLED=0 go build -o orochi -v main.go
@@ -29,9 +28,22 @@ $(GOLANGCI_LINT): | $(BINDIR)
 lint: | $(GOLANGCI_LINT)
 	$(GOLANGCI_LINT) run
 
+.PHONY: lintapi
+lintapi:
+	npx @redocly/cli lint --config .redocly.yaml internal/manager/api/openapi.yaml internal/gateway/api/openapi.yaml
+
 .PHONY: test
 test: build
 	go test -v ./...
+
+.PHONY: html
+html: html/manager.html html/object.html
+
+html/manager.html: internal/manager/api/openapi.yaml
+	npx @redocly/cli build-docs $< -o $@
+
+html/object.html: internal/gateway/api/openapi.yaml
+	npx @redocly/cli build-docs $< -o $@
 
 .PHONY: clean
 clean:
