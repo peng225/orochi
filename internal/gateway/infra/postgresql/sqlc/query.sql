@@ -19,6 +19,11 @@ WHERE name = $1 AND bucket_id = $2;
 SELECT * FROM object_metadata
 WHERE id = $1;
 
+-- name: SelectObjectMetadatas :many
+SELECT * FROM object_metadata
+WHERE id >= $1 AND bucket_id = $2
+LIMIT $3;
+
 -- name: SelectLocationGroups :many
 SELECT * from location_group;
 

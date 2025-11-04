@@ -31,9 +31,16 @@ type CreateObjectMetadataRequest struct {
 	LocationGroupID int64
 }
 
+type GetObjectMetadatasRequest struct {
+	BucketID      int64
+	FirstObjectID int64
+	Limit         int
+}
+
 type ObjectMetadataRepository interface {
 	CreateObjectMetadata(ctx context.Context, req *CreateObjectMetadataRequest) (int64, error)
 	GetObjectMetadataByName(ctx context.Context, name string, bucketID int64) (*entity.ObjectMetadata, error)
+	GetObjectMetadatas(ctx context.Context, req *GetObjectMetadatasRequest) ([]*entity.ObjectMetadata, error)
 	DeleteObjectMetadata(ctx context.Context, id int64) error
 }
 

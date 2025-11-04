@@ -5,6 +5,7 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,11 +15,22 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
+// ObjectList defines model for objectList.
+type ObjectList = []string
+
 // Bucket defines model for bucket.
 type Bucket = string
 
 // Object defines model for object.
 type Object = string
+
+// ListObjectsParams defines parameters for ListObjects.
+type ListObjectsParams struct {
+	XFirstObjectID *int64 `json:"X-First-Object-ID,omitempty"`
+
+	// XLimit The limit of the result array length
+	XLimit *int `json:"X-Limit,omitempty"`
+}
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
@@ -93,6 +105,9 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
+	// ListObjects request
+	ListObjects(ctx context.Context, bucket Bucket, params *ListObjectsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// DeleteObject request
 	DeleteObject(ctx context.Context, bucket Bucket, object Object, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -101,6 +116,18 @@ type ClientInterface interface {
 
 	// CreateObjectWithBody request with any body
 	CreateObjectWithBody(ctx context.Context, bucket Bucket, object Object, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
+
+func (c *Client) ListObjects(ctx context.Context, bucket Bucket, params *ListObjectsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListObjectsRequest(c.Server, bucket, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 func (c *Client) DeleteObject(ctx context.Context, bucket Bucket, object Object, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -137,6 +164,66 @@ func (c *Client) CreateObjectWithBody(ctx context.Context, bucket Bucket, object
 		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+// NewListObjectsRequest generates requests for ListObjects
+func NewListObjectsRequest(server string, bucket Bucket, params *ListObjectsParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "bucket", runtime.ParamLocationPath, bucket)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+
+		if params.XFirstObjectID != nil {
+			var headerParam0 string
+
+			headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-First-Object-ID", runtime.ParamLocationHeader, *params.XFirstObjectID)
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-First-Object-ID", headerParam0)
+		}
+
+		if params.XLimit != nil {
+			var headerParam1 string
+
+			headerParam1, err = runtime.StyleParamWithLocation("simple", false, "X-Limit", runtime.ParamLocationHeader, *params.XLimit)
+			if err != nil {
+				return nil, err
+			}
+
+			req.Header.Set("X-Limit", headerParam1)
+		}
+
+	}
+
+	return req, nil
 }
 
 // NewDeleteObjectRequest generates requests for DeleteObject
@@ -307,6 +394,9 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
+	// ListObjectsWithResponse request
+	ListObjectsWithResponse(ctx context.Context, bucket Bucket, params *ListObjectsParams, reqEditors ...RequestEditorFn) (*ListObjectsResponse, error)
+
 	// DeleteObjectWithResponse request
 	DeleteObjectWithResponse(ctx context.Context, bucket Bucket, object Object, reqEditors ...RequestEditorFn) (*DeleteObjectResponse, error)
 
@@ -315,6 +405,28 @@ type ClientWithResponsesInterface interface {
 
 	// CreateObjectWithBodyWithResponse request with any body
 	CreateObjectWithBodyWithResponse(ctx context.Context, bucket Bucket, object Object, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateObjectResponse, error)
+}
+
+type ListObjectsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ObjectList
+}
+
+// Status returns HTTPResponse.Status
+func (r ListObjectsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListObjectsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
 }
 
 type DeleteObjectResponse struct {
@@ -380,6 +492,15 @@ func (r CreateObjectResponse) StatusCode() int {
 	return 0
 }
 
+// ListObjectsWithResponse request returning *ListObjectsResponse
+func (c *ClientWithResponses) ListObjectsWithResponse(ctx context.Context, bucket Bucket, params *ListObjectsParams, reqEditors ...RequestEditorFn) (*ListObjectsResponse, error) {
+	rsp, err := c.ListObjects(ctx, bucket, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListObjectsResponse(rsp)
+}
+
 // DeleteObjectWithResponse request returning *DeleteObjectResponse
 func (c *ClientWithResponses) DeleteObjectWithResponse(ctx context.Context, bucket Bucket, object Object, reqEditors ...RequestEditorFn) (*DeleteObjectResponse, error) {
 	rsp, err := c.DeleteObject(ctx, bucket, object, reqEditors...)
@@ -405,6 +526,32 @@ func (c *ClientWithResponses) CreateObjectWithBodyWithResponse(ctx context.Conte
 		return nil, err
 	}
 	return ParseCreateObjectResponse(rsp)
+}
+
+// ParseListObjectsResponse parses an HTTP response from a ListObjectsWithResponse call
+func ParseListObjectsResponse(rsp *http.Response) (*ListObjectsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListObjectsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ObjectList
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
 }
 
 // ParseDeleteObjectResponse parses an HTTP response from a DeleteObjectWithResponse call

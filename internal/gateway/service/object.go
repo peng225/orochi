@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	randv2 "math/rand/v2"
 	"slices"
 
@@ -99,6 +100,7 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucket string
 	if err != nil {
 		return fmt.Errorf("failed to encode: %w", err)
 	}
+	// FIXME: parallelize.
 	for i, ds := range lg.CurrentDatastores {
 		err = osvc.chunkRepos[ds].CreateObject(ctx, bucket, name, bytes.NewBuffer(codes[i]))
 		if err != nil {
@@ -229,4 +231,41 @@ func (osvc *ObjectService) DeleteObject(ctx context.Context, name, bucket string
 		return fmt.Errorf("failed to delete object metadata: %w", err)
 	}
 	return nil
+}
+
+func (osvc *ObjectService) ListObjects(
+	ctx context.Context, bucket string,
+	firstObjectID int64, limit int,
+) ([]string, int64, error) {
+	slog.Debug("ObjectService::ListObjects called.",
+		"bucket", bucket, "firstObjectID", firstObjectID, "limit", limit)
+	if limit > 1000 {
+		return nil, 0, fmt.Errorf("limit must not larger than 1000: %w", ErrInvalidParameter)
+	}
+	bkt, err := osvc.bucketRepo.GetBucketByName(ctx, bucket)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return nil, 0, ErrInvalidParameter
+		}
+		return nil, 0, fmt.Errorf("failed to get bucket by name: %w", err)
+	}
+	oms, err := osvc.omRepo.GetObjectMetadatas(ctx, &GetObjectMetadatasRequest{
+		BucketID:      bkt.ID,
+		FirstObjectID: firstObjectID,
+		Limit:         limit + 1,
+	})
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get object medadatas: %w", err)
+	}
+	var nextObjectID int64 = math.MaxInt64
+	if len(oms) == limit+1 {
+		nextObjectID = oms[limit].ID
+		oms = oms[:limit]
+	}
+	objNames := make([]string, 0, len(oms))
+	for _, om := range oms {
+		objNames = append(objNames, om.Name)
+	}
+
+	return objNames, nextObjectID, err
 }

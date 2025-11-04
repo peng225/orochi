@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/peng225/orochi/internal/gateway/api/server"
 	"github.com/peng225/orochi/internal/gateway/service"
@@ -70,4 +72,41 @@ func (oh *ObjectHandler) DeleteObject(w http.ResponseWriter, r *http.Request, bu
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (oh *ObjectHandler) ListObjects(
+	w http.ResponseWriter, r *http.Request, bucket server.Bucket, params server.ListObjectsParams,
+) {
+	var firstObjectID int64 = 0
+	if params.XFirstObjectID != nil {
+		firstObjectID = *params.XFirstObjectID
+	}
+	limit := 1000
+	if params.XLimit != nil {
+		limit = *params.XLimit
+	}
+	objList, nextObjectID, err := oh.os.ListObjects(r.Context(), string(bucket), firstObjectID, limit)
+	if err != nil {
+		slog.Error("ListObjects failed.", "err", err)
+		switch {
+		case errors.Is(err, service.ErrInvalidParameter):
+			w.WriteHeader(http.StatusBadRequest)
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		return
+	}
+	w.Header().Add("X-Next-Object-ID", strconv.FormatInt(nextObjectID, 10))
+	data, err := json.Marshal(objList)
+	if err != nil {
+		slog.Error("Failed to marshal object list.", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	_, err = w.Write(data)
+	if err != nil {
+		slog.Error("Failed to write object list to body.", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }

@@ -37,12 +37,15 @@ test: build
 	go test -v ./...
 
 .PHONY: html
-html: html/manager.html html/object.html
+html: html/manager.html html/gateway.html html/datastore.html
 
 html/manager.html: internal/manager/api/openapi.yaml
 	npx @redocly/cli build-docs $< -o $@
 
-html/object.html: internal/gateway/api/openapi.yaml
+html/gateway.html: internal/gateway/api/openapi.yaml
+	npx @redocly/cli build-docs $< -o $@
+
+html/datastore.html: internal/datastore/api/openapi.yaml
 	npx @redocly/cli build-docs $< -o $@
 
 .PHONY: clean

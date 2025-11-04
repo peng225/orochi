@@ -76,3 +76,27 @@ func (omr *ObjectMetadataRepository) DeleteObjectMetadata(ctx context.Context, i
 	}
 	return nil
 }
+
+func (omr *ObjectMetadataRepository) GetObjectMetadatas(
+	ctx context.Context, req *service.GetObjectMetadatasRequest,
+) ([]*entity.ObjectMetadata, error) {
+	ret, err := omr.q.SelectObjectMetadatas(ctx, query.SelectObjectMetadatasParams{
+		ID:       req.FirstObjectID,
+		BucketID: req.BucketID,
+		Limit:    int32(req.Limit),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get object metadatas: %w", err)
+	}
+
+	oms := make([]*entity.ObjectMetadata, 0, len(ret))
+	for _, v := range ret {
+		oms = append(oms, &entity.ObjectMetadata{
+			ID:              v.ID,
+			Name:            v.Name,
+			BucketID:        v.BucketID,
+			LocationGroupID: v.LocationGroupID,
+		})
+	}
+	return oms, nil
+}

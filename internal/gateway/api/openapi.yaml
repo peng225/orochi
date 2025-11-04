@@ -60,7 +60,51 @@ paths:
         '400':
           description: Bucket should be created first
 
+  /{bucket}:
+    get:
+      summary: List objects
+      operationId: listObjects
+      parameters:
+        - $ref: '#/components/parameters/bucket'
+        - name: X-First-Object-ID
+          in: header
+          required: false
+          schema:
+            type: integer
+            format: int64
+            default: 0
+        - name: X-Limit
+          in: header
+          description: The limit of the result array length
+          required: false
+          schema:
+            type: integer
+            default: 1000
+      responses:
+        '200':
+          description: Objects listed successfully
+          headers:
+            X-Next-Object-ID:
+              description: |
+                Next object ID for the continuous requests.
+                If the last object is included in the result,
+                this header is set to the maximum value of int64.
+              schema:
+                type: integer
+                format: int64
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/objectList'
+        '400':
+          description: Bucket should be created first
+
 components:
+  schemas:
+    objectList:
+      type: array
+      items:
+        type: string
   parameters:
     bucket:
       name: bucket

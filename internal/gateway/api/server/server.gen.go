@@ -12,14 +12,28 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
+// ObjectList defines model for objectList.
+type ObjectList = []string
+
 // Bucket defines model for bucket.
 type Bucket = string
 
 // Object defines model for object.
 type Object = string
 
+// ListObjectsParams defines parameters for ListObjects.
+type ListObjectsParams struct {
+	XFirstObjectID *int64 `json:"X-First-Object-ID,omitempty"`
+
+	// XLimit The limit of the result array length
+	XLimit *int `json:"X-Limit,omitempty"`
+}
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// List objects
+	// (GET /{bucket})
+	ListObjects(w http.ResponseWriter, r *http.Request, bucket Bucket, params ListObjectsParams)
 	// Delete a object
 	// (DELETE /{bucket}/{object})
 	DeleteObject(w http.ResponseWriter, r *http.Request, bucket Bucket, object Object)
@@ -39,6 +53,74 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// ListObjects operation middleware
+func (siw *ServerInterfaceWrapper) ListObjects(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "bucket" -------------
+	var bucket Bucket
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bucket", r.PathValue("bucket"), &bucket, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bucket", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListObjectsParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "X-First-Object-ID" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-First-Object-ID")]; found {
+		var XFirstObjectID int64
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-First-Object-ID", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-First-Object-ID", valueList[0], &XFirstObjectID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-First-Object-ID", Err: err})
+			return
+		}
+
+		params.XFirstObjectID = &XFirstObjectID
+
+	}
+
+	// ------------- Optional header parameter "X-Limit" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Limit")]; found {
+		var XLimit int
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Limit", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Limit", valueList[0], &XLimit, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Limit", Err: err})
+			return
+		}
+
+		params.XLimit = &XLimit
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListObjects(w, r, bucket, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // DeleteObject operation middleware
 func (siw *ServerInterfaceWrapper) DeleteObject(w http.ResponseWriter, r *http.Request) {
@@ -262,6 +344,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	m.HandleFunc("GET "+options.BaseURL+"/{bucket}", wrapper.ListObjects)
 	m.HandleFunc("DELETE "+options.BaseURL+"/{bucket}/{object}", wrapper.DeleteObject)
 	m.HandleFunc("GET "+options.BaseURL+"/{bucket}/{object}", wrapper.GetObject)
 	m.HandleFunc("PUT "+options.BaseURL+"/{bucket}/{object}", wrapper.CreateObject)

@@ -160,3 +160,43 @@ func (q *Queries) SelectObjectMetadataByName(ctx context.Context, arg SelectObje
 	}
 	return items, nil
 }
+
+const selectObjectMetadatas = `-- name: SelectObjectMetadatas :many
+SELECT id, name, bucket_id, location_group_id FROM object_metadata
+WHERE id >= $1 AND bucket_id = $2
+LIMIT $3
+`
+
+type SelectObjectMetadatasParams struct {
+	ID       int64
+	BucketID int64
+	Limit    int32
+}
+
+func (q *Queries) SelectObjectMetadatas(ctx context.Context, arg SelectObjectMetadatasParams) ([]ObjectMetadatum, error) {
+	rows, err := q.db.QueryContext(ctx, selectObjectMetadatas, arg.ID, arg.BucketID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ObjectMetadatum
+	for rows.Next() {
+		var i ObjectMetadatum
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.BucketID,
+			&i.LocationGroupID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

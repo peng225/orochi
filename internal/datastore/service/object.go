@@ -53,17 +53,18 @@ func (osvc *ObjectService) CreateObject(bucket, object string, data io.Reader) e
 	defer f.Close()
 
 	var written int64
-	buf := make([]byte, maxDataSize)
+	buf := make([]byte, 65536)
 	for {
 		n, err := data.Read(buf)
 		if n > 0 {
+			if written+int64(n) > maxDataSize {
+				// FIXME: should return 4xx error.
+				return fmt.Errorf("received too large data")
+			}
 			if _, werr := f.Write(buf[:n]); werr != nil {
 				return fmt.Errorf("failed to write data: %w", werr)
 			}
 			written += int64(n)
-		}
-		if written > maxDataSize {
-			return fmt.Errorf("received too large data")
 		}
 		if err == io.EOF {
 			break
