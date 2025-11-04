@@ -25,6 +25,21 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		levelStr, err := cmd.Flags().GetString(getFlagName())
+		if err != nil {
+			slog.Error(err.Error())
+			os.Exit(1)
+		}
+		logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+			Level: parseLogLevel(levelStr),
+		}))
+		slog.SetDefault(logger)
+		port, err := cmd.Flags().GetString("port")
+		if err != nil {
+			slog.Error(err.Error())
+			os.Exit(1)
+		}
+
 		dsRepo := postgresql.NewDatastoreRepository()
 		defer dsRepo.Close()
 		omRepo := postgresql.NewObjectMetadataRepository()
@@ -34,11 +49,6 @@ to quickly create a Cobra application.`,
 			omRepo, bucketRepo, lgRepo)
 		objHandler := handler.NewObjectHandler(objService)
 		h := server.Handler(objHandler)
-		port, err := cmd.Flags().GetString("port")
-		if err != nil {
-			slog.Error(err.Error())
-			os.Exit(1)
-		}
 		err = http.ListenAndServe(net.JoinHostPort("", port), h)
 		if err != nil {
 			slog.Error("Server failed to start.", "err", err)
@@ -60,4 +70,5 @@ func init() {
 	// is called directly, e.g.:
 	// gatewayCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	gatewayCmd.Flags().StringP("port", "p", "8081", "Port number")
+	setLogLevelFlag(gatewayCmd)
 }

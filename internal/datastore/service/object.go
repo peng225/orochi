@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,6 +24,7 @@ func NewObjectStore() *ObjectService {
 }
 
 func (osvc *ObjectService) CreateObject(bucket, object string, data io.Reader) error {
+	slog.Debug("ObjectService::CreateObject called.", "bucket", bucket, "object", object)
 	err := checkBucketFormat(bucket)
 	if err != nil {
 		return err
@@ -70,10 +72,12 @@ func (osvc *ObjectService) CreateObject(bucket, object string, data io.Reader) e
 			return fmt.Errorf("failed to read data: %w", err)
 		}
 	}
+	slog.Debug("Written data.", "size", written)
 	// FIXME: synchronous fsync call may lead to the performance degradation.
 	if err := f.Sync(); err != nil {
 		return fmt.Errorf("failed to sync file: %w", err)
 	}
+	slog.Debug("File synced.")
 
 	if err := os.Rename(tmpPath, objectPath); err != nil {
 		return fmt.Errorf("failed to rename file: %w", err)
@@ -83,6 +87,7 @@ func (osvc *ObjectService) CreateObject(bucket, object string, data io.Reader) e
 }
 
 func (osvc *ObjectService) GetObject(bucket, object string) ([]byte, error) {
+	slog.Debug("ObjectService::GetObject called.", "bucket", bucket, "object", object)
 	err := checkBucketFormat(bucket)
 	if err != nil {
 		return nil, err
@@ -111,6 +116,7 @@ func (osvc *ObjectService) GetObject(bucket, object string) ([]byte, error) {
 }
 
 func (osvc *ObjectService) DeleteObject(bucket, object string) error {
+	slog.Debug("ObjectService::DeleteObject called.", "bucket", bucket, "object", object)
 	err := checkBucketFormat(bucket)
 	if err != nil {
 		return err

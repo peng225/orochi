@@ -23,13 +23,22 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		objHandler := handler.NewObjectHandler(service.NewObjectStore())
-		h := server.Handler(objHandler)
+		levelStr, err := cmd.Flags().GetString(getFlagName())
+		if err != nil {
+			slog.Error(err.Error())
+			os.Exit(1)
+		}
+		logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+			Level: parseLogLevel(levelStr),
+		}))
+		slog.SetDefault(logger)
 		port, err := cmd.Flags().GetString("port")
 		if err != nil {
 			slog.Error(err.Error())
 			os.Exit(1)
 		}
+		objHandler := handler.NewObjectHandler(service.NewObjectStore())
+		h := server.Handler(objHandler)
 		err = http.ListenAndServe(net.JoinHostPort("", port), h)
 		if err != nil {
 			slog.Error("Server failed to start.", "err", err)
@@ -51,4 +60,5 @@ func init() {
 	// is called directly, e.g.:
 	// datastoreCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	datastoreCmd.Flags().StringP("port", "p", "8082", "Port number")
+	setLogLevelFlag(datastoreCmd)
 }

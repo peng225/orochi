@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	randv2 "math/rand/v2"
 	"slices"
 
@@ -60,6 +61,7 @@ func (osvc *ObjectService) Refresh(ctx context.Context) error {
 }
 
 func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucket string, r io.Reader) error {
+	slog.Debug("ObjectService::CreateObject called.", "name", name, "bucket", bucket)
 	// FIXME: Should avoid per request refresh for performance.
 	err := osvc.Refresh(ctx)
 	if err != nil {
@@ -107,6 +109,7 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucket string
 }
 
 func (osvc *ObjectService) GetObject(ctx context.Context, name, bucket string) ([]byte, error) {
+	slog.Debug("ObjectService::GetObject called.", "name", name, "bucket", bucket)
 	om, err := osvc.getObjectMetadataByName(ctx, name, bucket)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get object metadata: %w", err)
@@ -199,6 +202,7 @@ func (osvc *ObjectService) getObjectMetadataByName(
 }
 
 func (osvc *ObjectService) DeleteObject(ctx context.Context, name, bucket string, r io.Reader) error {
+	slog.Debug("ObjectService::DeleteObject called.", "name", name, "bucket", bucket)
 	om, err := osvc.getObjectMetadataByName(ctx, name, bucket)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {

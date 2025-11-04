@@ -33,15 +33,15 @@ prepare:
 		-p 8080:8080 \
 		$(IMAGE_NAME) \
 		manager
-	docker run -d --name datastore0 --network testnet -p 8082:8082 $(IMAGE_NAME) datastore -p 8082
-	docker run -d --name datastore1 --network testnet -p 8083:8083 $(IMAGE_NAME) datastore -p 8083
-	docker run -d --name datastore2 --network testnet -p 8084:8084 $(IMAGE_NAME) datastore -p 8084
+	docker run -d --name datastore0 --network testnet -p 8082:8082 $(IMAGE_NAME) datastore -p 8082 --log-level debug
+	docker run -d --name datastore1 --network testnet -p 8083:8083 $(IMAGE_NAME) datastore -p 8083 --log-level debug
+	docker run -d --name datastore2 --network testnet -p 8084:8084 $(IMAGE_NAME) datastore -p 8084 --log-level debug
 	docker run -d \
 		--name gateway \
 		--network testnet \
 		-e DSN="host=postgres port=5432 user=testuser password=testpass dbname=orochi sslmode=disable" \
 		-p 8081:8081 $(IMAGE_NAME) \
-		gateway
+		gateway -p 8081 --log-level debug
 
 .PHONY: clean
 clean:
