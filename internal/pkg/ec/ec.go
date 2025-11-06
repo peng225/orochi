@@ -49,7 +49,7 @@ func NewManager(
 	}
 	for i := range numParity {
 		val := gf256(1)
-		evalPoint := Gf256Generator().Pow(numData + i)
+		evalPoint := GF256Generator().Pow(numData + i)
 		for j := range numData {
 			generatorMatrix.Set(numData+i, j, val)
 			val = val.Mul(evalPoint)

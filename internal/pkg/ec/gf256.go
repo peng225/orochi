@@ -15,8 +15,8 @@ var (
 	invTable [256]gf256
 )
 
-// Irreducible polynomial for GF(2^8): x^8 + x^4 + x^3 + x + 1
-const gfPolynomial = 0x11B
+// Irreducible polynomial for GF(2^8): x^8 + x^4 + x^3 + x^2 + 1
+const gfPolynomial = 0x11D
 
 type gf256 byte
 
@@ -46,7 +46,8 @@ func offset(a int) int {
 	return (a * (a + 1)) / 2
 }
 
-// ref. https://en.wikipedia.org/wiki/Ancient_Egyptian_multiplication#Russian_peasant_multiplication
+// ref1. https://en.wikipedia.org/wiki/Ancient_Egyptian_multiplication#Russian_peasant_multiplication
+// ref2. https://en.wikipedia.org/wiki/Finite_field_arithmetic#Rijndael's_(AES)_finite_field
 func (g gf256) calcMul(x gf256) gf256 {
 	var a = uint16(g)
 	var b = uint16(x)
@@ -78,7 +79,7 @@ func (g gf256) calcInv() gf256 {
 	return result
 }
 
-func Gf256Generator() gf256 {
+func GF256Generator() gf256 {
 	return gf256(2)
 }
 

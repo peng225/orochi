@@ -37,7 +37,7 @@ func TestInverse(t *testing.T) {
 		{
 			name:     "other1",
 			m:        NewGF256MatrixWithData(2, []gf256{0x28, 0x3, 0xc8, 0x4}),
-			expected: NewGF256MatrixWithData(2, []gf256{0x81, 0x26, 0x5a, 0x7d}),
+			expected: NewGF256MatrixWithData(2, []gf256{0xfe, 0xce, 0xc, 0x42}),
 		},
 		{
 			name:     "other2",
@@ -72,7 +72,7 @@ func TestMulRight(t *testing.T) {
 			name:     "not square",
 			m1:       NewGF256MatrixWithData(2, []gf256{0x81, 0x2, 0x1, 0x14, 0x0, 0xc1}),
 			m2:       NewGF256MatrixWithData(3, []gf256{0x1, 0x20, 0x20, 0x3, 0xc2, 0x5}),
-			expected: NewGF256MatrixWithData(2, []gf256{0x3, 0x88, 0x7c, 0x5e}),
+			expected: NewGF256MatrixWithData(2, []gf256{0x3, 0xee, 0x95, 0x58}),
 		},
 	}
 	for _, tc := range testCases {

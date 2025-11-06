@@ -52,7 +52,7 @@ func TestMul(t *testing.T) {
 			name:     "large",
 			a:        0xc5,
 			b:        0xd9,
-			expected: 0x8f,
+			expected: 0x56,
 		},
 	}
 	for _, tc := range testCases {
@@ -92,7 +92,7 @@ func TestDiv(t *testing.T) {
 			name:     "other",
 			a:        0xe5,
 			b:        0x26,
-			expected: 0x1c,
+			expected: 0x39,
 		},
 	}
 	for _, tc := range testCases {
@@ -132,7 +132,7 @@ func TestPow(t *testing.T) {
 			name:     "other",
 			a:        0xa5,
 			i:        5,
-			expected: 0x91,
+			expected: 0xff,
 		},
 	}
 	for _, tc := range testCases {
@@ -157,7 +157,7 @@ func TestInv(t *testing.T) {
 		{
 			name:     "other",
 			a:        0xa5,
-			expected: 0xb8,
+			expected: 0xc2,
 		},
 	}
 	for _, tc := range testCases {
@@ -166,4 +166,14 @@ func TestInv(t *testing.T) {
 			require.Equal(t, tc.expected, tc.a.Inv())
 		})
 	}
+}
+
+func TestGf256Generator(t *testing.T) {
+	g := GF256Generator()
+	v := g
+	for range 254 {
+		require.NotEqual(t, gf256(1), v)
+		v = v.Mul(g)
+	}
+	require.Equal(t, gf256(1), v)
 }
