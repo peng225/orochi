@@ -12,7 +12,7 @@ CREATE TABLE location_group(
 CREATE TYPE bucket_status AS ENUM ('active', 'deleted');
 CREATE TABLE bucket(
     id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(128) NOT NULL UNIQUE,
+    name VARCHAR(128) NOT NULL,
     status bucket_status NOT NULL
 );
 

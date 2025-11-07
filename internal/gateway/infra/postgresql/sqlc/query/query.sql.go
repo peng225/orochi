@@ -45,16 +45,32 @@ func (q *Queries) DeleteObjectMetadata(ctx context.Context, id int64) error {
 	return err
 }
 
-const selectBucketByName = `-- name: SelectBucketByName :one
+const selectBucketsByName = `-- name: SelectBucketsByName :many
 SELECT id, name, status FROM bucket
 WHERE name = $1
 `
 
-func (q *Queries) SelectBucketByName(ctx context.Context, name string) (Bucket, error) {
-	row := q.db.QueryRowContext(ctx, selectBucketByName, name)
-	var i Bucket
-	err := row.Scan(&i.ID, &i.Name, &i.Status)
-	return i, err
+func (q *Queries) SelectBucketsByName(ctx context.Context, name string) ([]Bucket, error) {
+	rows, err := q.db.QueryContext(ctx, selectBucketsByName, name)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Bucket
+	for rows.Next() {
+		var i Bucket
+		if err := rows.Scan(&i.ID, &i.Name, &i.Status); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const selectDatastores = `-- name: SelectDatastores :many

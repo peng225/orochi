@@ -34,7 +34,7 @@ func prepare(t *testing.T) {
 	require.Equal(t, http.StatusCreated, res.StatusCode)
 }
 
-func TestObjectCreateGet_Success(t *testing.T) {
+func TestObject_CreateAndGet(t *testing.T) {
 	prepare(t)
 
 	c, err := gwclient.NewClient("http://localhost:8081")
@@ -56,7 +56,7 @@ func TestObjectCreateGet_Success(t *testing.T) {
 	require.Equal(t, "test-data", string(data))
 }
 
-func TestObjectDelete_Success(t *testing.T) {
+func TestObject_Delete(t *testing.T) {
 	prepare(t)
 
 	c, err := gwclient.NewClient("http://localhost:8081")
@@ -82,7 +82,7 @@ func TestObjectDelete_Success(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, getRes.StatusCode)
 }
 
-func TestObjectList_Success(t *testing.T) {
+func TestObject_List(t *testing.T) {
 	prepare(t)
 
 	c, err := gwclient.NewClient("http://localhost:8081")

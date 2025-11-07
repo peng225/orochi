@@ -47,6 +47,10 @@ WHERE id = $2;
 SELECT * FROM bucket
 WHERE id = $1;
 
+-- name: SelectBucketsByName :many
+SELECT * FROM bucket
+WHERE name = $1;
+
 -- name: InsertJob :one
 INSERT INTO job (
    name, data

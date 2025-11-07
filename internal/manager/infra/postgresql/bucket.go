@@ -54,6 +54,22 @@ func (br *BucketRepository) GetBucket(ctx context.Context, id int64) (*entity.Bu
 	}, nil
 }
 
+func (br *BucketRepository) GetBucketsByName(ctx context.Context, name string) ([]*entity.Bucket, error) {
+	buckets, err := br.q.SelectBucketsByName(ctx, name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to select buckets by name: %w", err)
+	}
+	res := make([]*entity.Bucket, 0, len(buckets))
+	for _, b := range buckets {
+		res = append(res, &entity.Bucket{
+			ID:     b.ID,
+			Name:   b.Name,
+			Status: string(b.Status),
+		})
+	}
+	return res, nil
+}
+
 func (br *BucketRepository) ChangeBucketStatus(ctx context.Context, id int64, status string) error {
 	err := br.q.UpdateBucketStatus(ctx, query.UpdateBucketStatusParams{
 		ID:     id,

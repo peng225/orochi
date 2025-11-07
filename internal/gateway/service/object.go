@@ -159,10 +159,18 @@ func (osvc *ObjectService) createObjectMetadata(
 	name string,
 	bucketName string,
 ) (int64, error) {
-	bucket, err := osvc.bucketRepo.GetBucketByName(ctx, bucketName)
+	buckets, err := osvc.bucketRepo.GetBucketsByName(ctx, bucketName)
 	if err != nil {
-		return 0, fmt.Errorf("failed to get bucket by name: %w", err)
+		return 0, fmt.Errorf("failed to get buckets by name: %w", err)
 	}
+	bucket, err := extractActiveBucket(buckets)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return 0, ErrInvalidParameter
+		}
+		return 0, err
+	}
+
 	lgs, err := osvc.lgRepo.GetLocationGroups(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get location groups: %w", err)
@@ -188,12 +196,16 @@ func (osvc *ObjectService) getObjectMetadataByName(
 	ctx context.Context,
 	name, bucketName string,
 ) (*entity.ObjectMetadata, error) {
-	bucket, err := osvc.bucketRepo.GetBucketByName(ctx, bucketName)
+	buckets, err := osvc.bucketRepo.GetBucketsByName(ctx, bucketName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get buckets by name: %w", err)
+	}
+	bucket, err := extractActiveBucket(buckets)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return nil, ErrInvalidParameter
 		}
-		return nil, fmt.Errorf("failed to get bucket by name: %w", err)
+		return nil, err
 	}
 
 	om, err := osvc.omRepo.GetObjectMetadataByName(ctx, name, bucket.ID)
@@ -201,6 +213,26 @@ func (osvc *ObjectService) getObjectMetadataByName(
 		return nil, fmt.Errorf("failed to get object metadata by name: %w", err)
 	}
 	return om, nil
+}
+
+func extractActiveBucket(buckets []*entity.Bucket) (*entity.Bucket, error) {
+	bucketCount := 0
+	var bucket *entity.Bucket
+	for _, b := range buckets {
+		if b.Status == "deleted" {
+			continue
+		}
+		bucketCount++
+		bucket = b
+	}
+	switch bucketCount {
+	case 0:
+		return nil, ErrNotFound
+	case 1:
+		return bucket, nil
+	default:
+		return nil, fmt.Errorf("unexpected number of buckets found: %d", bucketCount)
+	}
 }
 
 func (osvc *ObjectService) DeleteObject(ctx context.Context, name, bucket string, r io.Reader) error {
@@ -242,15 +274,19 @@ func (osvc *ObjectService) ListObjects(
 	if limit > 1000 {
 		return nil, 0, fmt.Errorf("limit must not larger than 1000: %w", ErrInvalidParameter)
 	}
-	bkt, err := osvc.bucketRepo.GetBucketByName(ctx, bucket)
+	buckets, err := osvc.bucketRepo.GetBucketsByName(ctx, bucket)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get buckets by name: %w", err)
+	}
+	b, err := extractActiveBucket(buckets)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return nil, 0, ErrInvalidParameter
 		}
-		return nil, 0, fmt.Errorf("failed to get bucket by name: %w", err)
+		return nil, 0, err
 	}
 	oms, err := osvc.omRepo.GetObjectMetadatas(ctx, &GetObjectMetadatasRequest{
-		BucketID:      bkt.ID,
+		BucketID:      b.ID,
 		FirstObjectID: firstObjectID,
 		Limit:         limit + 1,
 	})
