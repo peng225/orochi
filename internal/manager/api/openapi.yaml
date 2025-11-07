@@ -67,16 +67,21 @@ paths:
         '400':
           description: Bad request
   /bucket/{id}:
+    get:
+      summary: Get a bucket
+      operationId: getBucket
+      parameters:
+        - $ref: '#/components/parameters/bucketID'
+      responses:
+        '200':
+          description: Bucket received successfully
+        '404':
+          description: Bucket not found
     delete:
       summary: Delete a bucket
       operationId: deleteBucket
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-            format: int64
+        - $ref: '#/components/parameters/bucketID'
       responses:
         '204':
           description: Bucket deleted successfully
@@ -109,6 +114,13 @@ components:
           example: test-bucket
   parameters:
     datastoreID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    bucketID:
       name: id
       in: path
       required: true

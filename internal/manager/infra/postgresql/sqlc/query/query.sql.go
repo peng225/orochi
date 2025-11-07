@@ -87,13 +87,13 @@ func (q *Queries) InsertLocationGroup(ctx context.Context, arg InsertLocationGro
 	return id, err
 }
 
-const selectBucketByName = `-- name: SelectBucketByName :one
+const selectBucket = `-- name: SelectBucket :one
 SELECT id, name, status FROM bucket
-WHERE name = $1
+WHERE id = $1
 `
 
-func (q *Queries) SelectBucketByName(ctx context.Context, name string) (Bucket, error) {
-	row := q.db.QueryRowContext(ctx, selectBucketByName, name)
+func (q *Queries) SelectBucket(ctx context.Context, id int64) (Bucket, error) {
+	row := q.db.QueryRowContext(ctx, selectBucket, id)
 	var i Bucket
 	err := row.Scan(&i.ID, &i.Name, &i.Status)
 	return i, err

@@ -50,6 +50,30 @@ func (bh *BucketHandler) CreateBucket(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
+func (bh *BucketHandler) GetBucket(w http.ResponseWriter, r *http.Request, id int64) {
+	bucket, err := bh.bs.GetBucket(r.Context(), id)
+	if err != nil {
+		slog.Error("Failed to get bucket.", "err", err)
+		switch {
+		case errors.Is(err, service.ErrNotFound):
+			w.WriteHeader(http.StatusNotFound)
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		return
+	}
+	data, err := json.Marshal(&bucket)
+	if err != nil {
+		slog.Error("Failed to marshal bucket.", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	_, err = w.Write(data)
+	if err != nil {
+		slog.Error("Failed to write data.", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
 func (bh *BucketHandler) DeleteBucket(w http.ResponseWriter, r *http.Request, id int64) {
 	err := bh.bs.DeleteBucket(r.Context(), id)
 	if err != nil {

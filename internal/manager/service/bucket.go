@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"regexp"
 
+	"github.com/peng225/orochi/internal/entity"
 	"github.com/peng225/orochi/internal/job"
 )
 
@@ -38,6 +39,14 @@ func (bs *BucketService) CreateBucket(ctx context.Context, name string) (int64, 
 func isValidBucketName(s string) bool {
 	re := regexp.MustCompile(`^[a-zA-Z0-9-]+$`)
 	return re.MatchString(s)
+}
+
+func (bs *BucketService) GetBucket(ctx context.Context, id int64) (*entity.Bucket, error) {
+	bucket, err := bs.bucketRepo.GetBucket(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get bucket: %w", err)
+	}
+	return bucket, nil
 }
 
 func (bs *BucketService) DeleteBucket(ctx context.Context, id int64) error {

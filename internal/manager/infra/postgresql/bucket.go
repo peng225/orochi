@@ -39,8 +39,8 @@ func (br *BucketRepository) CreateBucket(ctx context.Context, req *service.Creat
 	return id, nil
 }
 
-func (br *BucketRepository) GetBucketByName(ctx context.Context, name string) (*entity.Bucket, error) {
-	bucket, err := br.q.SelectBucketByName(ctx, name)
+func (br *BucketRepository) GetBucket(ctx context.Context, id int64) (*entity.Bucket, error) {
+	bucket, err := br.q.SelectBucket(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, service.ErrNotFound
@@ -48,8 +48,9 @@ func (br *BucketRepository) GetBucketByName(ctx context.Context, name string) (*
 		return nil, fmt.Errorf("failed to select bucket: %w", err)
 	}
 	return &entity.Bucket{
-		ID:   bucket.ID,
-		Name: bucket.Name,
+		ID:     bucket.ID,
+		Name:   bucket.Name,
+		Status: string(bucket.Status),
 	}, nil
 }
 

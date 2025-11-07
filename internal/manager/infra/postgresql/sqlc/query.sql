@@ -43,9 +43,9 @@ UPDATE bucket
 SET status = $1
 WHERE id = $2;
 
--- name: SelectBucketByName :one
+-- name: SelectBucket :one
 SELECT * FROM bucket
-WHERE name = $1;
+WHERE id = $1;
 
 -- name: InsertJob :one
 INSERT INTO job (
