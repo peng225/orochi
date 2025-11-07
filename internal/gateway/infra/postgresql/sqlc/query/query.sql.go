@@ -46,14 +46,14 @@ func (q *Queries) DeleteObjectMetadata(ctx context.Context, id int64) error {
 }
 
 const selectBucketByName = `-- name: SelectBucketByName :one
-SELECT id, name FROM bucket
+SELECT id, name, status FROM bucket
 WHERE name = $1
 `
 
 func (q *Queries) SelectBucketByName(ctx context.Context, name string) (Bucket, error) {
 	row := q.db.QueryRowContext(ctx, selectBucketByName, name)
 	var i Bucket
-	err := row.Scan(&i.ID, &i.Name)
+	err := row.Scan(&i.ID, &i.Name, &i.Status)
 	return i, err
 }
 

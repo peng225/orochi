@@ -4,14 +4,69 @@
 
 package query
 
+import (
+	"database/sql/driver"
+	"encoding/json"
+	"fmt"
+)
+
+type BucketStatus string
+
+const (
+	BucketStatusActive  BucketStatus = "active"
+	BucketStatusDeleted BucketStatus = "deleted"
+)
+
+func (e *BucketStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = BucketStatus(s)
+	case string:
+		*e = BucketStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for BucketStatus: %T", src)
+	}
+	return nil
+}
+
+type NullBucketStatus struct {
+	BucketStatus BucketStatus
+	Valid        bool // Valid is true if BucketStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullBucketStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.BucketStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.BucketStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullBucketStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.BucketStatus), nil
+}
+
 type Bucket struct {
-	ID   int64
-	Name string
+	ID     int64
+	Name   string
+	Status BucketStatus
 }
 
 type Datastore struct {
 	ID      int64
 	BaseUrl string
+}
+
+type Job struct {
+	ID   int64
+	Name string
+	Data json.RawMessage
 }
 
 type LocationGroup struct {

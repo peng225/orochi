@@ -119,6 +119,9 @@ type ClientInterface interface {
 
 	CreateBucket(ctx context.Context, body CreateBucketJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// DeleteBucket request
+	DeleteBucket(ctx context.Context, id int64, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// CreateDatastoreWithBody request with any body
 	CreateDatastoreWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -142,6 +145,18 @@ func (c *Client) CreateBucketWithBody(ctx context.Context, contentType string, b
 
 func (c *Client) CreateBucket(ctx context.Context, body CreateBucketJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewCreateBucketRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteBucket(ctx context.Context, id int64, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteBucketRequest(c.Server, id)
 	if err != nil {
 		return nil, err
 	}
@@ -224,6 +239,40 @@ func NewCreateBucketRequestWithBody(server string, contentType string, body io.R
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteBucketRequest generates requests for DeleteBucket
+func NewDeleteBucketRequest(server string, id int64) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/bucket/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	return req, nil
 }
@@ -350,6 +399,9 @@ type ClientWithResponsesInterface interface {
 
 	CreateBucketWithResponse(ctx context.Context, body CreateBucketJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateBucketResponse, error)
 
+	// DeleteBucketWithResponse request
+	DeleteBucketWithResponse(ctx context.Context, id int64, reqEditors ...RequestEditorFn) (*DeleteBucketResponse, error)
+
 	// CreateDatastoreWithBodyWithResponse request with any body
 	CreateDatastoreWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateDatastoreResponse, error)
 
@@ -374,6 +426,27 @@ func (r CreateBucketResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r CreateBucketResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteBucketResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteBucketResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteBucketResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -440,6 +513,15 @@ func (c *ClientWithResponses) CreateBucketWithResponse(ctx context.Context, body
 	return ParseCreateBucketResponse(rsp)
 }
 
+// DeleteBucketWithResponse request returning *DeleteBucketResponse
+func (c *ClientWithResponses) DeleteBucketWithResponse(ctx context.Context, id int64, reqEditors ...RequestEditorFn) (*DeleteBucketResponse, error) {
+	rsp, err := c.DeleteBucket(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteBucketResponse(rsp)
+}
+
 // CreateDatastoreWithBodyWithResponse request with arbitrary body returning *CreateDatastoreResponse
 func (c *ClientWithResponses) CreateDatastoreWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateDatastoreResponse, error) {
 	rsp, err := c.CreateDatastoreWithBody(ctx, contentType, body, reqEditors...)
@@ -475,6 +557,22 @@ func ParseCreateBucketResponse(rsp *http.Response) (*CreateBucketResponse, error
 	}
 
 	response := &CreateBucketResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseDeleteBucketResponse parses an HTTP response from a DeleteBucketWithResponse call
+func ParseDeleteBucketResponse(rsp *http.Response) (*DeleteBucketResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteBucketResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}

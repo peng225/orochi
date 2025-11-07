@@ -49,3 +49,18 @@ func (bh *BucketHandler) CreateBucket(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("X-Bucket-ID", strconv.FormatInt(id, 10))
 	w.WriteHeader(http.StatusCreated)
 }
+
+func (bh *BucketHandler) DeleteBucket(w http.ResponseWriter, r *http.Request, id int64) {
+	err := bh.bs.DeleteBucket(r.Context(), id)
+	if err != nil {
+		slog.Error("Failed to delete bucket.", "err", err)
+		switch {
+		case errors.Is(err, service.ErrInvalidParameter):
+			w.WriteHeader(http.StatusBadRequest)
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

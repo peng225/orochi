@@ -2,17 +2,23 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"regexp"
+
+	"github.com/peng225/orochi/internal/job"
 )
 
 type BucketService struct {
 	bucketRepo BucketRepository
+	jobRepo    JobRepository
 }
 
-func NewBucketService(bucketRepo BucketRepository) *BucketService {
+func NewBucketService(bucketRepo BucketRepository, jobRepo JobRepository) *BucketService {
 	return &BucketService{
 		bucketRepo: bucketRepo,
+		jobRepo:    jobRepo,
 	}
 }
 
@@ -32,4 +38,28 @@ func (bs *BucketService) CreateBucket(ctx context.Context, name string) (int64, 
 func isValidBucketName(s string) bool {
 	re := regexp.MustCompile(`^[a-zA-Z0-9-]+$`)
 	return re.MatchString(s)
+}
+
+func (bs *BucketService) DeleteBucket(ctx context.Context, id int64) error {
+	err := bs.bucketRepo.ChangeBucketStatus(ctx, id, "deleted")
+	if err != nil {
+		return fmt.Errorf("failed to change bucket status: %w", err)
+	}
+	param := job.DeleteAllObjectsInBUcketParam{
+		BucketID: id,
+	}
+	data, err := json.Marshal(&param)
+	if err != nil {
+		return fmt.Errorf("failed to marshal json: %w", err)
+	}
+	jobID, err := bs.jobRepo.CreateJob(ctx, &CreateJobRequest{
+		Name: "DeleteAllObjectsInBucket",
+		Data: data,
+	})
+	if err != nil {
+		return fmt.Errorf("failed create job: %w", err)
+	}
+	slog.Info("Created a job to delete all objects in a bucket.",
+		"bucketID", id, "jobID", jobID)
+	return nil
 }

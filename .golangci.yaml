@@ -12,3 +12,4 @@ linters:
         - (*github.com/peng225/orochi/internal/manager/infra/postgresql.DatastoreRepository).Close
         - (*github.com/peng225/orochi/internal/manager/infra/postgresql.LocationGroupRepository).Close
         - (*github.com/peng225/orochi/internal/manager/infra/postgresql.BucketRepository).Close
+        - (*github.com/peng225/orochi/internal/manager/infra/postgresql.JobRepository).Close

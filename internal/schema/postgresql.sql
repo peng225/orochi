@@ -9,9 +9,11 @@ CREATE TABLE location_group(
     desired_datastores BIGINT[] NOT NULL
 );
 
+CREATE TYPE bucket_status AS ENUM ('active', 'deleted');
 CREATE TABLE bucket(
     id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(128) NOT NULL UNIQUE
+    name VARCHAR(128) NOT NULL UNIQUE,
+    status bucket_status NOT NULL
 );
 
 CREATE TABLE object_metadata(
@@ -21,4 +23,10 @@ CREATE TABLE object_metadata(
     location_group_id BIGINT NOT NULL,
     FOREIGN KEY (bucket_id) REFERENCES bucket(id),
     FOREIGN KEY (location_group_id) REFERENCES location_group(id)
+);
+
+CREATE TABLE job(
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(128) NOT NULL,
+    data JSONB NOT NULL
 );

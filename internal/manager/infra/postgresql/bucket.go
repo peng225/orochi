@@ -52,3 +52,14 @@ func (br *BucketRepository) GetBucketByName(ctx context.Context, name string) (*
 		Name: bucket.Name,
 	}, nil
 }
+
+func (br *BucketRepository) ChangeBucketStatus(ctx context.Context, id int64, status string) error {
+	err := br.q.UpdateBucketStatus(ctx, query.UpdateBucketStatusParams{
+		ID:     id,
+		Status: query.BucketStatus(status),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update bucket status: %w", err)
+	}
+	return nil
+}

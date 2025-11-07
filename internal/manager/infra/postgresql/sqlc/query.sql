@@ -32,12 +32,25 @@ SELECT * from location_group;
 
 -- name: InsertBucket :one
 INSERT INTO bucket (
-   name
+   name, status
 ) VALUES (
-  $1
+  $1, 'active'
 )
 RETURNING id;
+
+-- name: UpdateBucketStatus :exec
+UPDATE bucket
+SET status = $1
+WHERE id = $2;
 
 -- name: SelectBucketByName :one
 SELECT * FROM bucket
 WHERE name = $1;
+
+-- name: InsertJob :one
+INSERT INTO job (
+   name, data
+) VALUES (
+  $1, $2
+)
+RETURNING id;

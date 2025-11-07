@@ -33,12 +33,14 @@ to quickly create a Cobra application.`,
 		defer lgRepo.Close()
 		bucketRepo := postgresql.NewBucketRepository()
 		defer bucketRepo.Close()
+		jobRepo := postgresql.NewJobRepository()
+		defer jobRepo.Close()
 
 		dsHandler := handler.NewDatastoreHandler(
 			service.NewDatastoreService(dsRepo, lgRepo),
 		)
 		bucketHandler := handler.NewBucketHandler(
-			service.NewBucketService(bucketRepo),
+			service.NewBucketService(bucketRepo, jobRepo),
 		)
 		h := server.Handler(struct {
 			*handler.DatastoreHandler

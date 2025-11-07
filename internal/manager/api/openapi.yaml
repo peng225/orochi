@@ -66,6 +66,22 @@ paths:
                 example: 1
         '400':
           description: Bad request
+  /bucket/{id}:
+    delete:
+      summary: Delete a bucket
+      operationId: deleteBucket
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Bucket deleted successfully
+        '400':
+          description: Bad request
 
 components:
   schemas:

@@ -33,4 +33,14 @@ type CreateBucketRequest struct {
 type BucketRepository interface {
 	CreateBucket(ctx context.Context, req *CreateBucketRequest) (int64, error)
 	GetBucketByName(ctx context.Context, name string) (*entity.Bucket, error)
+	ChangeBucketStatus(ctx context.Context, id int64, status string) error
+}
+
+type CreateJobRequest struct {
+	Name string
+	Data []byte
+}
+
+type JobRepository interface {
+	CreateJob(ctx context.Context, req *CreateJobRequest) (int64, error)
 }

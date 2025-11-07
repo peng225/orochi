@@ -7,15 +7,16 @@ package query
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/lib/pq"
 )
 
 const insertBucket = `-- name: InsertBucket :one
 INSERT INTO bucket (
-   name
+   name, status
 ) VALUES (
-  $1
+  $1, 'active'
 )
 RETURNING id
 `
@@ -38,6 +39,27 @@ RETURNING id
 
 func (q *Queries) InsertDatastore(ctx context.Context, baseUrl string) (int64, error) {
 	row := q.db.QueryRowContext(ctx, insertDatastore, baseUrl)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const insertJob = `-- name: InsertJob :one
+INSERT INTO job (
+   name, data
+) VALUES (
+  $1, $2
+)
+RETURNING id
+`
+
+type InsertJobParams struct {
+	Name string
+	Data json.RawMessage
+}
+
+func (q *Queries) InsertJob(ctx context.Context, arg InsertJobParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, insertJob, arg.Name, arg.Data)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -66,14 +88,14 @@ func (q *Queries) InsertLocationGroup(ctx context.Context, arg InsertLocationGro
 }
 
 const selectBucketByName = `-- name: SelectBucketByName :one
-SELECT id, name FROM bucket
+SELECT id, name, status FROM bucket
 WHERE name = $1
 `
 
 func (q *Queries) SelectBucketByName(ctx context.Context, name string) (Bucket, error) {
 	row := q.db.QueryRowContext(ctx, selectBucketByName, name)
 	var i Bucket
-	err := row.Scan(&i.ID, &i.Name)
+	err := row.Scan(&i.ID, &i.Name, &i.Status)
 	return i, err
 }
 
@@ -141,6 +163,22 @@ func (q *Queries) SelectLocationGroups(ctx context.Context) ([]LocationGroup, er
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateBucketStatus = `-- name: UpdateBucketStatus :exec
+UPDATE bucket
+SET status = $1
+WHERE id = $2
+`
+
+type UpdateBucketStatusParams struct {
+	Status BucketStatus
+	ID     int64
+}
+
+func (q *Queries) UpdateBucketStatus(ctx context.Context, arg UpdateBucketStatusParams) error {
+	_, err := q.db.ExecContext(ctx, updateBucketStatus, arg.Status, arg.ID)
+	return err
 }
 
 const updateDesiredDatastores = `-- name: UpdateDesiredDatastores :exec

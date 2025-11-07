@@ -42,6 +42,9 @@ type ServerInterface interface {
 	// Create a bucket
 	// (POST /bucket)
 	CreateBucket(w http.ResponseWriter, r *http.Request)
+	// Delete a bucket
+	// (DELETE /bucket/{id})
+	DeleteBucket(w http.ResponseWriter, r *http.Request, id int64)
 	// Create a datastore
 	// (POST /datastores)
 	CreateDatastore(w http.ResponseWriter, r *http.Request)
@@ -64,6 +67,31 @@ func (siw *ServerInterfaceWrapper) CreateBucket(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateBucket(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteBucket operation middleware
+func (siw *ServerInterfaceWrapper) DeleteBucket(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteBucket(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -233,6 +261,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	}
 
 	m.HandleFunc("POST "+options.BaseURL+"/bucket", wrapper.CreateBucket)
+	m.HandleFunc("DELETE "+options.BaseURL+"/bucket/{id}", wrapper.DeleteBucket)
 	m.HandleFunc("POST "+options.BaseURL+"/datastores", wrapper.CreateDatastore)
 	m.HandleFunc("GET "+options.BaseURL+"/datastores/{id}", wrapper.GetDatastore)
 
