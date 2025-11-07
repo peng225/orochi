@@ -101,7 +101,7 @@ func TestObject_List(t *testing.T) {
 		require.Equal(t, http.StatusCreated, createRes.StatusCode)
 	}
 
-	// Without limit parameter.
+	// Without query parameters.
 	res1, err := c.ListObjects(t.Context(), bucket, nil)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, res1.StatusCode)
@@ -120,7 +120,7 @@ func TestObject_List(t *testing.T) {
 	// With limit parameter.
 	limit := 2
 	res2, err := c.ListObjects(t.Context(), bucket, &gwclient.ListObjectsParams{
-		XLimit: &limit,
+		Limit: &limit,
 	})
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, res2.StatusCode)
@@ -137,9 +137,9 @@ func TestObject_List(t *testing.T) {
 	nextObjectID, err := strconv.ParseInt(res2.Header.Get("X-Next-Object-ID"), 10, 64)
 	require.NoError(t, err)
 
-	// With firstObjectID parameter.
+	// With startFrom parameter.
 	res3, err := c.ListObjects(t.Context(), bucket, &gwclient.ListObjectsParams{
-		XFirstObjectID: &nextObjectID,
+		StartFrom: &nextObjectID,
 	})
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, res3.StatusCode)

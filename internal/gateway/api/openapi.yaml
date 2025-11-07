@@ -66,15 +66,15 @@ paths:
       operationId: listObjects
       parameters:
         - $ref: '#/components/parameters/bucket'
-        - name: X-First-Object-ID
-          in: header
+        - name: start-from
+          in: query
           required: false
           schema:
             type: integer
             format: int64
             default: 0
-        - name: X-Limit
-          in: header
+        - name: limit
+          in: query
           description: The limit of the result array length
           required: false
           schema:

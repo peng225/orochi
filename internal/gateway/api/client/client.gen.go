@@ -26,10 +26,10 @@ type Object = string
 
 // ListObjectsParams defines parameters for ListObjects.
 type ListObjectsParams struct {
-	XFirstObjectID *int64 `json:"X-First-Object-ID,omitempty"`
+	StartFrom *int64 `form:"start-from,omitempty" json:"start-from,omitempty"`
 
-	// XLimit The limit of the result array length
-	XLimit *int `json:"X-Limit,omitempty"`
+	// Limit The limit of the result array length
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
@@ -192,35 +192,47 @@ func NewListObjectsRequest(server string, bucket Bucket, params *ListObjectsPara
 		return nil, err
 	}
 
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.StartFrom != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "start-from", runtime.ParamLocationQuery, *params.StartFrom); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "limit", runtime.ParamLocationQuery, *params.Limit); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
-	}
-
-	if params != nil {
-
-		if params.XFirstObjectID != nil {
-			var headerParam0 string
-
-			headerParam0, err = runtime.StyleParamWithLocation("simple", false, "X-First-Object-ID", runtime.ParamLocationHeader, *params.XFirstObjectID)
-			if err != nil {
-				return nil, err
-			}
-
-			req.Header.Set("X-First-Object-ID", headerParam0)
-		}
-
-		if params.XLimit != nil {
-			var headerParam1 string
-
-			headerParam1, err = runtime.StyleParamWithLocation("simple", false, "X-Limit", runtime.ParamLocationHeader, *params.XLimit)
-			if err != nil {
-				return nil, err
-			}
-
-			req.Header.Set("X-Limit", headerParam1)
-		}
-
 	}
 
 	return req, nil

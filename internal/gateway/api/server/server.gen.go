@@ -23,10 +23,10 @@ type Object = string
 
 // ListObjectsParams defines parameters for ListObjects.
 type ListObjectsParams struct {
-	XFirstObjectID *int64 `json:"X-First-Object-ID,omitempty"`
+	StartFrom *int64 `form:"start-from,omitempty" json:"start-from,omitempty"`
 
-	// XLimit The limit of the result array length
-	XLimit *int `json:"X-Limit,omitempty"`
+	// Limit The limit of the result array length
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ServerInterface represents all server handlers.
@@ -71,44 +71,20 @@ func (siw *ServerInterfaceWrapper) ListObjects(w http.ResponseWriter, r *http.Re
 	// Parameter object where we will unmarshal all parameters from the context
 	var params ListObjectsParams
 
-	headers := r.Header
+	// ------------- Optional query parameter "start-from" -------------
 
-	// ------------- Optional header parameter "X-First-Object-ID" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("X-First-Object-ID")]; found {
-		var XFirstObjectID int64
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-First-Object-ID", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "X-First-Object-ID", valueList[0], &XFirstObjectID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-First-Object-ID", Err: err})
-			return
-		}
-
-		params.XFirstObjectID = &XFirstObjectID
-
+	err = runtime.BindQueryParameter("form", true, false, "start-from", r.URL.Query(), &params.StartFrom)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "start-from", Err: err})
+		return
 	}
 
-	// ------------- Optional header parameter "X-Limit" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("X-Limit")]; found {
-		var XLimit int
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Limit", Count: n})
-			return
-		}
+	// ------------- Optional query parameter "limit" -------------
 
-		err = runtime.BindStyledParameterWithOptions("simple", "X-Limit", valueList[0], &XLimit, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Limit", Err: err})
-			return
-		}
-
-		params.XLimit = &XLimit
-
+	err = runtime.BindQueryParameter("form", true, false, "limit", r.URL.Query(), &params.Limit)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

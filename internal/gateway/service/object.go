@@ -267,10 +267,10 @@ func (osvc *ObjectService) DeleteObject(ctx context.Context, name, bucket string
 
 func (osvc *ObjectService) ListObjects(
 	ctx context.Context, bucket string,
-	firstObjectID int64, limit int,
+	startFrom int64, limit int,
 ) ([]string, int64, error) {
 	slog.Debug("ObjectService::ListObjects called.",
-		"bucket", bucket, "firstObjectID", firstObjectID, "limit", limit)
+		"bucket", bucket, "startFrom", startFrom, "limit", limit)
 	if limit > 1000 {
 		return nil, 0, fmt.Errorf("limit must not larger than 1000: %w", ErrInvalidParameter)
 	}
@@ -286,12 +286,12 @@ func (osvc *ObjectService) ListObjects(
 		return nil, 0, err
 	}
 	oms, err := osvc.omRepo.GetObjectMetadatas(ctx, &GetObjectMetadatasRequest{
-		BucketID:      b.ID,
-		FirstObjectID: firstObjectID,
-		Limit:         limit + 1,
+		BucketID:  b.ID,
+		StartFrom: startFrom,
+		Limit:     limit + 1,
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get object medadatas: %w", err)
+		return nil, 0, fmt.Errorf("failed to get object metadatas: %w", err)
 	}
 	var nextObjectID int64 = math.MaxInt64
 	if len(oms) == limit+1 {

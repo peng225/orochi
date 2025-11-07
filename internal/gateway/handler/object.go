@@ -77,15 +77,15 @@ func (oh *ObjectHandler) DeleteObject(w http.ResponseWriter, r *http.Request, bu
 func (oh *ObjectHandler) ListObjects(
 	w http.ResponseWriter, r *http.Request, bucket server.Bucket, params server.ListObjectsParams,
 ) {
-	var firstObjectID int64 = 0
-	if params.XFirstObjectID != nil {
-		firstObjectID = *params.XFirstObjectID
+	var startFrom int64 = 0
+	if params.StartFrom != nil {
+		startFrom = *params.StartFrom
 	}
 	limit := 1000
-	if params.XLimit != nil {
-		limit = *params.XLimit
+	if params.Limit != nil {
+		limit = *params.Limit
 	}
-	objList, nextObjectID, err := oh.os.ListObjects(r.Context(), string(bucket), firstObjectID, limit)
+	objList, nextObjectID, err := oh.os.ListObjects(r.Context(), string(bucket), startFrom, limit)
 	if err != nil {
 		slog.Error("ListObjects failed.", "err", err)
 		switch {

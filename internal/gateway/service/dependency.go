@@ -32,9 +32,9 @@ type CreateObjectMetadataRequest struct {
 }
 
 type GetObjectMetadatasRequest struct {
-	BucketID      int64
-	FirstObjectID int64
-	Limit         int
+	BucketID  int64
+	StartFrom int64
+	Limit     int
 }
 
 type ObjectMetadataRepository interface {

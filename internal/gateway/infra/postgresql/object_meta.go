@@ -81,7 +81,7 @@ func (omr *ObjectMetadataRepository) GetObjectMetadatas(
 	ctx context.Context, req *service.GetObjectMetadatasRequest,
 ) ([]*entity.ObjectMetadata, error) {
 	ret, err := omr.q.SelectObjectMetadatas(ctx, query.SelectObjectMetadatasParams{
-		ID:       req.FirstObjectID,
+		ID:       req.StartFrom,
 		BucketID: req.BucketID,
 		Limit:    int32(req.Limit),
 	})
