@@ -86,5 +86,5 @@ func (bh *BucketHandler) DeleteBucket(w http.ResponseWriter, r *http.Request, id
 		}
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	w.WriteHeader(http.StatusAccepted)
 }

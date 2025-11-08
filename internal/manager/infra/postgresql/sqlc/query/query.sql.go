@@ -99,34 +99,6 @@ func (q *Queries) SelectBucket(ctx context.Context, id int64) (Bucket, error) {
 	return i, err
 }
 
-const selectBucketsByName = `-- name: SelectBucketsByName :many
-SELECT id, name, status FROM bucket
-WHERE name = $1
-`
-
-func (q *Queries) SelectBucketsByName(ctx context.Context, name string) ([]Bucket, error) {
-	rows, err := q.db.QueryContext(ctx, selectBucketsByName, name)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Bucket
-	for rows.Next() {
-		var i Bucket
-		if err := rows.Scan(&i.ID, &i.Name, &i.Status); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const selectDatastore = `-- name: SelectDatastore :one
 SELECT id, base_url FROM datastore
 WHERE id = $1

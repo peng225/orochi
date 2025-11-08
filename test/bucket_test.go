@@ -40,7 +40,7 @@ func TestBucket_CreateAndGet(t *testing.T) {
 	require.Equal(t, "active", got.Status)
 }
 
-func TestBucket_CreateAfterDelete(t *testing.T) {
+func TestBucket_Delete(t *testing.T) {
 	c, err := mgrclient.NewClient("http://localhost:8080")
 	require.NoError(t, err)
 	bucketName := "test-bucket"
@@ -49,19 +49,11 @@ func TestBucket_CreateAfterDelete(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, http.StatusCreated, createResp.StatusCode)
 	idStr := createResp.Header.Get("X-Bucket-ID")
-	id1, err := strconv.ParseInt(idStr, 10, 64)
+	id, err := strconv.ParseInt(idStr, 10, 64)
 	require.NoError(t, err)
 
-	deleteResp, err := c.DeleteBucket(t.Context(), id1)
+	deleteResp, err := c.DeleteBucket(t.Context(), id)
 	require.NoError(t, err)
 	defer deleteResp.Body.Close()
-	require.Equal(t, http.StatusNoContent, deleteResp.StatusCode)
-
-	createResp2, err := c.CreateBucketWithBody(t.Context(), "application/json", strings.NewReader(reqBody))
-	require.NoError(t, err)
-	require.Equal(t, http.StatusCreated, createResp2.StatusCode)
-	idStr = createResp2.Header.Get("X-Bucket-ID")
-	id2, err := strconv.ParseInt(idStr, 10, 64)
-	require.NoError(t, err)
-	require.NotEqual(t, id1, id2)
+	require.Equal(t, http.StatusAccepted, deleteResp.StatusCode)
 }

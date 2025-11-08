@@ -27,28 +27,6 @@ func (bs *BucketService) CreateBucket(ctx context.Context, name string) (int64, 
 	if !isValidBucketName(name) {
 		return 0, ErrInvalidParameter
 	}
-	buckets, err := bs.bucketRepo.GetBucketsByName(ctx, name)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get buckets by name: %w", err)
-	}
-	bucketCount := 0
-	var bucket *entity.Bucket
-	for _, b := range buckets {
-		if b.Status == "deleted" {
-			continue
-		}
-		bucketCount++
-		bucket = b
-	}
-	switch bucketCount {
-	case 0:
-		// Bucket not found. Should create a new bucket.
-	case 1:
-		return bucket.ID, nil
-	default:
-		return 0, fmt.Errorf("unexpected number of buckets found: %d", bucketCount)
-	}
-
 	id, err := bs.bucketRepo.CreateBucket(ctx, &CreateBucketRequest{
 		Name: name,
 	})

@@ -31,6 +31,6 @@ SELECT * from location_group;
 SELECT * from location_group
 WHERE id = $1;
 
--- name: SelectBucketsByName :many
+-- name: SelectBucketByName :one
 SELECT * FROM bucket
 WHERE name = $1;

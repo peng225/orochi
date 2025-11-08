@@ -33,7 +33,6 @@ type CreateBucketRequest struct {
 type BucketRepository interface {
 	CreateBucket(ctx context.Context, req *CreateBucketRequest) (int64, error)
 	GetBucket(ctx context.Context, id int64) (*entity.Bucket, error)
-	GetBucketsByName(ctx context.Context, name string) ([]*entity.Bucket, error)
 	ChangeBucketStatus(ctx context.Context, id int64, status string) error
 }
 

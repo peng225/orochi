@@ -83,8 +83,8 @@ paths:
       parameters:
         - $ref: '#/components/parameters/bucketID'
       responses:
-        '204':
-          description: Bucket deleted successfully
+        '202':
+          description: Bucket delete request accepted
         '400':
           description: Bad request
 

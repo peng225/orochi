@@ -45,7 +45,7 @@ type ObjectMetadataRepository interface {
 }
 
 type BucketRepository interface {
-	GetBucketsByName(ctx context.Context, name string) ([]*entity.Bucket, error)
+	GetBucketByName(ctx context.Context, name string) (*entity.Bucket, error)
 }
 
 type LocationGroupRepository interface {
