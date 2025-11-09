@@ -1,0 +1,108 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: postgres
+    networks:
+      - testnet
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=testuser
+      - POSTGRES_PASSWORD=testpass
+      - POSTGRES_DB=orochi
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} -h localhost -p 5432"]
+      interval: 1s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+  initdb:
+    image: postgres:18
+    container_name: initdb
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - testnet
+    volumes:
+      - ../internal/schema:/schema
+    entrypoint: >
+      bash -c "
+        echo 'Initializing database...';
+        psql 'postgresql://testuser:testpass@postgres:5432/orochi' -f /schema/postgresql.sql;
+        echo 'Database initialized successfully.';
+      "
+    restart: "no"
+  datastore0:
+    build:
+      context: ..
+    image: ghcr.io/peng225/orochi:latest
+    container_name: datastore0
+    command: ["datastore", "-p", "8082", "--log-level", "debug"]
+    networks:
+      - testnet
+    ports:
+      - 8082:8082
+  datastore1:
+    image: ghcr.io/peng225/orochi:latest
+    container_name: datastore1
+    command: ["datastore", "-p", "8083", "--log-level", "debug"]
+    networks:
+      - testnet
+    ports:
+      - 8083:8083
+  datastore2:
+    image: ghcr.io/peng225/orochi:latest
+    container_name: datastore2
+    command: ["datastore", "-p", "8084", "--log-level", "debug"]
+    networks:
+      - testnet
+    ports:
+      - 8084:8084
+  gateway:
+    image: ghcr.io/peng225/orochi:latest
+    container_name: gateway
+    depends_on:
+      datastore0:
+        condition: service_started
+      datastore1:
+        condition: service_started
+      datastore2:
+        condition: service_started
+      initdb:
+        condition: service_completed_successfully
+    command: ["gateway", "-p", "8081", "--log-level", "debug"]
+    networks:
+      - testnet
+    ports:
+      - 8081:8081
+    environment:
+      - DSN=host=postgres port=5432 user=testuser password=testpass dbname=orochi sslmode=disable
+  manager:
+    image: ghcr.io/peng225/orochi:latest
+    container_name: manager
+    depends_on:
+      initdb:
+        condition: service_completed_successfully
+    command: ["manager", "-p", "8080"]
+    networks:
+      - testnet
+    ports:
+      - 8080:8080
+    environment:
+      - DSN=host=postgres port=5432 user=testuser password=testpass dbname=orochi sslmode=disable
+  async:
+    image: ghcr.io/peng225/orochi:latest
+    container_name: async
+    depends_on:
+      initdb:
+        condition: service_completed_successfully
+    command: ["async", "--period", "1s", "--gateway-base-url", "http://gateway:8081", "--log-level", "debug"]
+    networks:
+      - testnet
+    environment:
+      - DSN=host=postgres port=5432 user=testuser password=testpass dbname=orochi sslmode=disable
+
+networks:
+  testnet:
+    driver: bridge
