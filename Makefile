@@ -34,7 +34,7 @@ lintapi:
 
 .PHONY: test
 test: build
-	go test -v ./...
+	go test -v ./internal/...
 
 .PHONY: html
 html: html/manager.html html/gateway.html html/datastore.html

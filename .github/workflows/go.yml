@@ -1,0 +1,29 @@
+name: Test
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v5
+    - name: Set up Go
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: go.mod
+    - name: Generate and check diff
+      run: |
+        make generate
+        make html
+        git diff --exit-code
+    - name: Lint
+      run: |
+        make lint
+        make lintapi
+    - name: Test
+      run: |
+        make test
