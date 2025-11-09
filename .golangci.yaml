@@ -13,3 +13,5 @@ linters:
         - (*github.com/peng225/orochi/internal/manager/infra/postgresql.LocationGroupRepository).Close
         - (*github.com/peng225/orochi/internal/manager/infra/postgresql.BucketRepository).Close
         - (*github.com/peng225/orochi/internal/manager/infra/postgresql.JobRepository).Close
+        - (*github.com/peng225/orochi/internal/async/infra/postgresql.BucketRepository).Close
+        - (*github.com/peng225/orochi/internal/async/infra/postgresql.JobRepository).Close
