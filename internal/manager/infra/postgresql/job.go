@@ -31,7 +31,7 @@ func (br *JobRepository) Close() error {
 
 func (br *JobRepository) CreateJob(ctx context.Context, req *service.CreateJobRequest) (int64, error) {
 	id, err := br.q.InsertJob(ctx, query.InsertJobParams{
-		Name: req.Name,
+		Kind: req.Kind,
 		Data: req.Data,
 	})
 	if err != nil {

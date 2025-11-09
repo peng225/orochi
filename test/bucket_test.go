@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/peng225/orochi/internal/entity"
 	mgrclient "github.com/peng225/orochi/internal/manager/api/client"
@@ -56,4 +57,16 @@ func TestBucket_Delete(t *testing.T) {
 	require.NoError(t, err)
 	defer deleteResp.Body.Close()
 	require.Equal(t, http.StatusAccepted, deleteResp.StatusCode)
+	require.Eventually(t, func() bool {
+		getResp, err := c.GetBucket(t.Context(), id)
+		if err != nil {
+			return false
+		}
+		defer getResp.Body.Close()
+		_, err = io.Copy(io.Discard, getResp.Body)
+		if err != nil {
+			return false
+		}
+		return getResp.StatusCode == http.StatusNotFound
+	}, 10*time.Second, 1*time.Second)
 }

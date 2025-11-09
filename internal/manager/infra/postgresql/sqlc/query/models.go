@@ -65,7 +65,7 @@ type Datastore struct {
 
 type Job struct {
 	ID   int64
-	Name string
+	Kind string
 	Data json.RawMessage
 }
 

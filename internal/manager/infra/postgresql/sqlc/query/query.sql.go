@@ -46,7 +46,7 @@ func (q *Queries) InsertDatastore(ctx context.Context, baseUrl string) (int64, e
 
 const insertJob = `-- name: InsertJob :one
 INSERT INTO job (
-   name, data
+   kind, data
 ) VALUES (
   $1, $2
 )
@@ -54,12 +54,12 @@ RETURNING id
 `
 
 type InsertJobParams struct {
-	Name string
+	Kind string
 	Data json.RawMessage
 }
 
 func (q *Queries) InsertJob(ctx context.Context, arg InsertJobParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, insertJob, arg.Name, arg.Data)
+	row := q.db.QueryRowContext(ctx, insertJob, arg.Kind, arg.Data)
 	var id int64
 	err := row.Scan(&id)
 	return id, err

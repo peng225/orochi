@@ -37,7 +37,7 @@ type BucketRepository interface {
 }
 
 type CreateJobRequest struct {
-	Name string
+	Kind string
 	Data []byte
 }
 

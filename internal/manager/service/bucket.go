@@ -8,7 +8,6 @@ import (
 	"regexp"
 
 	"github.com/peng225/orochi/internal/entity"
-	"github.com/peng225/orochi/internal/job"
 )
 
 type BucketService struct {
@@ -54,7 +53,7 @@ func (bs *BucketService) DeleteBucket(ctx context.Context, id int64) error {
 	if err != nil {
 		return fmt.Errorf("failed to change bucket status: %w", err)
 	}
-	param := job.DeleteAllObjectsInBUcketParam{
+	param := entity.DeleteAllObjectsInBucketParam{
 		BucketID: id,
 	}
 	data, err := json.Marshal(&param)
@@ -62,7 +61,7 @@ func (bs *BucketService) DeleteBucket(ctx context.Context, id int64) error {
 		return fmt.Errorf("failed to marshal json: %w", err)
 	}
 	jobID, err := bs.jobRepo.CreateJob(ctx, &CreateJobRequest{
-		Name: "DeleteAllObjectsInBucket",
+		Kind: entity.DeleteAllObjectsInBucket,
 		Data: data,
 	})
 	if err != nil {

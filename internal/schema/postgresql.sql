@@ -27,6 +27,6 @@ CREATE TABLE object_metadata(
 
 CREATE TABLE job(
     id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(128) NOT NULL,
+    kind VARCHAR(128) NOT NULL,
     data JSONB NOT NULL
 );

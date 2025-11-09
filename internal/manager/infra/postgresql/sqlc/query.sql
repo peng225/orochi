@@ -49,7 +49,7 @@ WHERE id = $1;
 
 -- name: InsertJob :one
 INSERT INTO job (
-   name, data
+   kind, data
 ) VALUES (
   $1, $2
 )

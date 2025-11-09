@@ -42,9 +42,17 @@ prepare:
 		-e DSN="host=postgres port=5432 user=testuser password=testpass dbname=orochi sslmode=disable" \
 		-p 8081:8081 $(IMAGE_NAME) \
 		gateway -p 8081 --log-level debug
+	docker run -d \
+		--name async \
+		--network testnet \
+		-e DSN="host=postgres port=5432 user=testuser password=testpass dbname=orochi sslmode=disable" \
+		$(IMAGE_NAME) \
+		async --period 1s --gateway-base-url http://gateway:8081 --log-level debug
 
 .PHONY: clean
 clean:
+	docker stop async || true
+	docker rm async || true
 	docker stop gateway || true
 	docker rm gateway || true
 	docker stop datastore0 || true
