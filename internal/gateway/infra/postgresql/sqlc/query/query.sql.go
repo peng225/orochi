@@ -36,7 +36,7 @@ func (q *Queries) CreateObjectMetadata(ctx context.Context, arg CreateObjectMeta
 }
 
 const deleteObjectMetadata = `-- name: DeleteObjectMetadata :exec
-SELECT id, name, bucket_id, location_group_id FROM object_metadata
+DELETE FROM object_metadata
 WHERE id = $1
 `
 
