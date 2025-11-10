@@ -15,10 +15,15 @@ import (
 	mgrclient "github.com/peng225/orochi/internal/manager/api/client"
 )
 
+const (
+	gatewayBaseURL = "http://localhost:8081"
+	managerBaseURL = "http://localhost:8080"
+)
+
 func prepareBucket(t *testing.T) string {
 	t.Helper()
 
-	c, err := mgrclient.NewClient("http://localhost:8080")
+	c, err := mgrclient.NewClient(managerBaseURL)
 	require.NoError(t, err)
 
 	bucketName := fmt.Sprintf("test-bucket-%s", generateRandomStr(t, 8))
@@ -40,7 +45,7 @@ func prepareBucket(t *testing.T) string {
 func teardownBucket(t *testing.T, bucketID int64) {
 	t.Helper()
 
-	c, err := mgrclient.NewClient("http://localhost:8080")
+	c, err := mgrclient.NewClient(managerBaseURL)
 	require.NoError(t, err)
 
 	resp, err := c.DeleteBucket(context.Background(), bucketID)

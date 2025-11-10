@@ -16,7 +16,7 @@ import (
 )
 
 func TestBucket_CreateGetDelete(t *testing.T) {
-	c, err := mgrclient.NewClient("http://localhost:8080")
+	c, err := mgrclient.NewClient(managerBaseURL)
 	require.NoError(t, err)
 	bucketName := "test-bucket"
 	reqBody := fmt.Sprintf(`{"name": "%s"}`, bucketName)
@@ -59,7 +59,7 @@ func TestBucket_CreateGetDelete(t *testing.T) {
 }
 
 func TestBucket_Create_BadRequest(t *testing.T) {
-	c, err := mgrclient.NewClient("http://localhost:8080")
+	c, err := mgrclient.NewClient(managerBaseURL)
 	require.NoError(t, err)
 	bucketName := "test-bucket//"
 	reqBody := fmt.Sprintf(`{"name": "%s"}`, bucketName)
@@ -69,7 +69,7 @@ func TestBucket_Create_BadRequest(t *testing.T) {
 }
 
 func TestBucket_Get_NotFound(t *testing.T) {
-	c, err := mgrclient.NewClient("http://localhost:8080")
+	c, err := mgrclient.NewClient(managerBaseURL)
 	require.NoError(t, err)
 	resp, err := c.GetBucket(t.Context(), int64(1000))
 	require.NoError(t, err)

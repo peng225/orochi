@@ -11,7 +11,7 @@ import (
 )
 
 func TestDatastore_Create_BadRequest(t *testing.T) {
-	c, err := mgrclient.NewClient("http://localhost:8080")
+	c, err := mgrclient.NewClient(managerBaseURL)
 	require.NoError(t, err)
 	baseURL := "ftp://invalid-datastore"
 	reqBody := fmt.Sprintf(`{"baseURL": "%s"}`, baseURL)
@@ -21,7 +21,7 @@ func TestDatastore_Create_BadRequest(t *testing.T) {
 }
 
 func TestDatastore_Get_NotFound(t *testing.T) {
-	c, err := mgrclient.NewClient("http://localhost:8080")
+	c, err := mgrclient.NewClient(managerBaseURL)
 	require.NoError(t, err)
 	resp, err := c.GetDatastore(t.Context(), int64(1000))
 	require.NoError(t, err)
