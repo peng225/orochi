@@ -16,6 +16,7 @@ import (
 
 type Processor struct {
 	period     time.Duration
+	tx         Transaction
 	jobRepo    JobRepository
 	bucketRepo BucketRepository
 	gwClient   *client.Client
@@ -23,12 +24,14 @@ type Processor struct {
 
 func NewProcessor(
 	period time.Duration,
+	tx Transaction,
 	jobRepo JobRepository,
 	bucketRepo BucketRepository,
 	gwClient *client.Client,
 ) *Processor {
 	return &Processor{
 		period:     period,
+		tx:         tx,
 		jobRepo:    jobRepo,
 		bucketRepo: bucketRepo,
 		gwClient:   gwClient,
@@ -92,49 +95,59 @@ func (p *Processor) processDeleteAllObjectsInBucketJob(ctx context.Context, job 
 	if err != nil {
 		return false, fmt.Errorf("failed to unmarshal job data: %w", err)
 	}
-	b, err := p.bucketRepo.GetBucket(ctx, param.BucketID)
-	if err != nil {
-		if errors.Is(err, ErrNotFound) {
-			slog.Info("Bucket not found.")
-			return true, nil
-		}
-		return false, fmt.Errorf("failed to get bucket: %w", err)
-	}
 
-	listResp, err := p.gwClient.ListObjects(ctx, b.Name, nil)
-	if err != nil {
-		return false, fmt.Errorf("failed to list objects: %w", err)
-	}
-	defer listResp.Body.Close()
-	if listResp.StatusCode != http.StatusOK {
-		return false, fmt.Errorf("unexpected status code: %d", listResp.StatusCode)
-	}
-	data, err := io.ReadAll(listResp.Body)
-	if err != nil {
-		return false, fmt.Errorf("failed to read body: %w", err)
-	}
-	objectNames := make([]string, 0)
-	err = json.Unmarshal(data, &objectNames)
-	if err != nil {
-		return false, fmt.Errorf("failed to unmarshal object names: %w", err)
-	}
-	if len(objectNames) == 0 {
-		slog.Info("No object found in the bucket. Job finished.", "bucketID", param.BucketID)
-		err := p.bucketRepo.DeleteBucket(ctx, param.BucketID)
+	finished := false
+	err = p.tx.Do(ctx, func(ctx context.Context) error {
+		b, err := p.bucketRepo.GetBucket(ctx, param.BucketID)
 		if err != nil {
-			return false, fmt.Errorf("failed to delete bucket: %w", err)
+			if errors.Is(err, ErrNotFound) {
+				slog.Info("Bucket not found.")
+				finished = true
+				return nil
+			}
+			return fmt.Errorf("failed to get bucket: %w", err)
 		}
-		return true, nil
-	}
 
-	for _, objectName := range objectNames {
-		delResp, err := p.gwClient.DeleteObject(ctx, b.Name, objectName)
+		listResp, err := p.gwClient.ListObjects(ctx, b.Name, nil)
 		if err != nil {
-			return false, fmt.Errorf("failed to delete object: %w", err)
+			return fmt.Errorf("failed to list objects: %w", err)
 		}
-		if delResp.StatusCode != http.StatusNoContent {
-			return false, fmt.Errorf("unexpected status code: %d", delResp.StatusCode)
+		defer listResp.Body.Close()
+		if listResp.StatusCode != http.StatusOK {
+			return fmt.Errorf("unexpected status code: %d", listResp.StatusCode)
 		}
+		data, err := io.ReadAll(listResp.Body)
+		if err != nil {
+			return fmt.Errorf("failed to read body: %w", err)
+		}
+		objectNames := make([]string, 0)
+		err = json.Unmarshal(data, &objectNames)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal object names: %w", err)
+		}
+		if len(objectNames) == 0 {
+			slog.Info("No object found in the bucket. Job finished.", "bucketID", param.BucketID)
+			err := p.bucketRepo.DeleteBucket(ctx, param.BucketID)
+			if err != nil {
+				return fmt.Errorf("failed to delete bucket: %w", err)
+			}
+			finished = true
+			return nil
+		}
+
+		for _, objectName := range objectNames {
+			delResp, err := p.gwClient.DeleteObject(ctx, b.Name, objectName)
+			if err != nil {
+				return fmt.Errorf("failed to delete object: %w", err)
+			}
+			if delResp.StatusCode != http.StatusNoContent {
+				return fmt.Errorf("unexpected status code: %d", delResp.StatusCode)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return false, fmt.Errorf("transaction failed: %w", err)
 	}
-	return false, nil
+	return finished, nil
 }

@@ -6,6 +6,10 @@ import (
 	"github.com/peng225/orochi/internal/entity"
 )
 
+type Transaction interface {
+	Do(ctx context.Context, fn func(ctx context.Context) error) error
+}
+
 type JobRepository interface {
 	GetJobs(ctx context.Context, limit int) ([]*entity.Job, error)
 	DeleteJob(ctx context.Context, id int64) error

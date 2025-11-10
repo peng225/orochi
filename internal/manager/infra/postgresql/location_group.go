@@ -13,27 +13,25 @@ import (
 )
 
 type LocationGroupRepository struct {
-	db *sql.DB
-	q  *query.Queries
+	q *query.Queries
 }
 
-func NewLocationGroupRepository() *LocationGroupRepository {
-	db := psqlutil.InitDB()
+func NewLocationGroupRepository(db *sql.DB) *LocationGroupRepository {
 	return &LocationGroupRepository{
-		db: db,
-		q:  query.New(db),
+		q: query.New(db),
 	}
-}
-
-func (lgr *LocationGroupRepository) Close() error {
-	return lgr.db.Close()
 }
 
 func (lgr *LocationGroupRepository) CreateLocationGroup(
 	ctx context.Context,
 	req *service.CreateLocationGroupRequest,
 ) (int64, error) {
-	id, err := lgr.q.InsertLocationGroup(ctx, query.InsertLocationGroupParams{
+	tx := psqlutil.TxFromCtx(ctx)
+	q := lgr.q
+	if tx != nil {
+		q = lgr.q.WithTx(tx)
+	}
+	id, err := q.InsertLocationGroup(ctx, query.InsertLocationGroupParams{
 		CurrentDatastores: req.Datastores,
 		DesiredDatastores: req.Datastores,
 	})
@@ -48,7 +46,12 @@ func (lgr *LocationGroupRepository) UpdateDesiredDatastores(
 	id int64,
 	desiredDatastores []int64,
 ) error {
-	err := lgr.q.UpdateDesiredDatastores(ctx, query.UpdateDesiredDatastoresParams{
+	tx := psqlutil.TxFromCtx(ctx)
+	q := lgr.q
+	if tx != nil {
+		q = lgr.q.WithTx(tx)
+	}
+	err := q.UpdateDesiredDatastores(ctx, query.UpdateDesiredDatastoresParams{
 		ID:                id,
 		DesiredDatastores: desiredDatastores,
 	})
@@ -59,7 +62,12 @@ func (lgr *LocationGroupRepository) UpdateDesiredDatastores(
 }
 
 func (lgr *LocationGroupRepository) GetLocationGroups(ctx context.Context) ([]*entity.LocationGroup, error) {
-	lgs, err := lgr.q.SelectLocationGroups(ctx)
+	tx := psqlutil.TxFromCtx(ctx)
+	q := lgr.q
+	if tx != nil {
+		q = lgr.q.WithTx(tx)
+	}
+	lgs, err := q.SelectLocationGroups(ctx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, service.ErrNotFound

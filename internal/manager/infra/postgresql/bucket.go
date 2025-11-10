@@ -15,24 +15,22 @@ import (
 )
 
 type BucketRepository struct {
-	db *sql.DB
-	q  *query.Queries
+	q *query.Queries
 }
 
-func NewBucketRepository() *BucketRepository {
-	db := psqlutil.InitDB()
+func NewBucketRepository(db *sql.DB) *BucketRepository {
 	return &BucketRepository{
-		db: db,
-		q:  query.New(db),
+		q: query.New(db),
 	}
 }
 
-func (br *BucketRepository) Close() error {
-	return br.db.Close()
-}
-
 func (br *BucketRepository) CreateBucket(ctx context.Context, req *service.CreateBucketRequest) (int64, error) {
-	id, err := br.q.InsertBucket(ctx, req.Name)
+	tx := psqlutil.TxFromCtx(ctx)
+	q := br.q
+	if tx != nil {
+		q = br.q.WithTx(tx)
+	}
+	id, err := q.InsertBucket(ctx, req.Name)
 	if err != nil {
 		return 0, fmt.Errorf("failed to insert bucket: %w", err)
 	}
@@ -40,7 +38,12 @@ func (br *BucketRepository) CreateBucket(ctx context.Context, req *service.Creat
 }
 
 func (br *BucketRepository) GetBucket(ctx context.Context, id int64) (*entity.Bucket, error) {
-	bucket, err := br.q.SelectBucket(ctx, id)
+	tx := psqlutil.TxFromCtx(ctx)
+	q := br.q
+	if tx != nil {
+		q = br.q.WithTx(tx)
+	}
+	bucket, err := q.SelectBucket(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, service.ErrNotFound
@@ -55,7 +58,12 @@ func (br *BucketRepository) GetBucket(ctx context.Context, id int64) (*entity.Bu
 }
 
 func (br *BucketRepository) ChangeBucketStatus(ctx context.Context, id int64, status string) error {
-	err := br.q.UpdateBucketStatus(ctx, query.UpdateBucketStatusParams{
+	tx := psqlutil.TxFromCtx(ctx)
+	q := br.q
+	if tx != nil {
+		q = br.q.WithTx(tx)
+	}
+	err := q.UpdateBucketStatus(ctx, query.UpdateBucketStatusParams{
 		ID:     id,
 		Status: query.BucketStatus(status),
 	})

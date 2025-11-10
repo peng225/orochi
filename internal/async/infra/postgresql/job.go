@@ -13,24 +13,22 @@ import (
 )
 
 type JobRepository struct {
-	db *sql.DB
-	q  *query.Queries
+	q *query.Queries
 }
 
-func NewJobRepository() *JobRepository {
-	db := psqlutil.InitDB()
+func NewJobRepository(db *sql.DB) *JobRepository {
 	return &JobRepository{
-		db: db,
-		q:  query.New(db),
+		q: query.New(db),
 	}
 }
 
-func (br *JobRepository) Close() error {
-	return br.db.Close()
-}
-
-func (br *JobRepository) GetJobs(ctx context.Context, limit int) ([]*entity.Job, error) {
-	jobs, err := br.q.SelectJobs(ctx, int32(limit))
+func (jr *JobRepository) GetJobs(ctx context.Context, limit int) ([]*entity.Job, error) {
+	tx := psqlutil.TxFromCtx(ctx)
+	q := jr.q
+	if tx != nil {
+		q = jr.q.WithTx(tx)
+	}
+	jobs, err := q.SelectJobs(ctx, int32(limit))
 	if err != nil {
 		return nil, fmt.Errorf("failed to select jobs: %w", err)
 	}
@@ -45,8 +43,13 @@ func (br *JobRepository) GetJobs(ctx context.Context, limit int) ([]*entity.Job,
 	return res, nil
 }
 
-func (br *JobRepository) DeleteJob(ctx context.Context, id int64) error {
-	err := br.q.DeleteJob(ctx, id)
+func (jr *JobRepository) DeleteJob(ctx context.Context, id int64) error {
+	tx := psqlutil.TxFromCtx(ctx)
+	q := jr.q
+	if tx != nil {
+		q = jr.q.WithTx(tx)
+	}
+	err := q.DeleteJob(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete job: %w", err)
 	}

@@ -13,24 +13,22 @@ import (
 )
 
 type DatastoreRepository struct {
-	db *sql.DB
-	q  *query.Queries
+	q *query.Queries
 }
 
-func NewDatastoreRepository() *DatastoreRepository {
-	db := psqlutil.InitDB()
+func NewDatastoreRepository(db *sql.DB) *DatastoreRepository {
 	return &DatastoreRepository{
-		db: db,
-		q:  query.New(db),
+		q: query.New(db),
 	}
 }
 
-func (dr *DatastoreRepository) Close() error {
-	return dr.db.Close()
-}
-
 func (dr *DatastoreRepository) GetDatastores(ctx context.Context) ([]*entity.Datastore, error) {
-	dss, err := dr.q.SelectDatastores(ctx)
+	tx := psqlutil.TxFromCtx(ctx)
+	q := dr.q
+	if tx != nil {
+		q = dr.q.WithTx(tx)
+	}
+	dss, err := q.SelectDatastores(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to select datastores: %w", err)
 	}

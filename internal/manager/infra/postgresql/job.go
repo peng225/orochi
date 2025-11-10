@@ -13,24 +13,22 @@ import (
 )
 
 type JobRepository struct {
-	db *sql.DB
-	q  *query.Queries
+	q *query.Queries
 }
 
-func NewJobRepository() *JobRepository {
-	db := psqlutil.InitDB()
+func NewJobRepository(db *sql.DB) *JobRepository {
 	return &JobRepository{
-		db: db,
-		q:  query.New(db),
+		q: query.New(db),
 	}
 }
 
-func (br *JobRepository) Close() error {
-	return br.db.Close()
-}
-
-func (br *JobRepository) CreateJob(ctx context.Context, req *service.CreateJobRequest) (int64, error) {
-	id, err := br.q.InsertJob(ctx, query.InsertJobParams{
+func (jr *JobRepository) CreateJob(ctx context.Context, req *service.CreateJobRequest) (int64, error) {
+	tx := psqlutil.TxFromCtx(ctx)
+	q := jr.q
+	if tx != nil {
+		q = jr.q.WithTx(tx)
+	}
+	id, err := q.InsertJob(ctx, query.InsertJobParams{
 		Kind: req.Kind,
 		Data: req.Data,
 	})

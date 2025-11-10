@@ -14,24 +14,24 @@ import (
 )
 
 type ObjectMetadataRepository struct {
-	db *sql.DB
-	q  *query.Queries
+	q *query.Queries
 }
 
-func NewObjectMetadataRepository() *ObjectMetadataRepository {
-	db := psqlutil.InitDB()
+func NewObjectMetadataRepository(db *sql.DB) *ObjectMetadataRepository {
 	return &ObjectMetadataRepository{
-		db: db,
-		q:  query.New(db),
+		q: query.New(db),
 	}
 }
 
-func (omr *ObjectMetadataRepository) Close() error {
-	return omr.db.Close()
-}
-
-func (omr *ObjectMetadataRepository) CreateObjectMetadata(ctx context.Context, req *service.CreateObjectMetadataRequest) (int64, error) {
-	id, err := omr.q.CreateObjectMetadata(ctx, query.CreateObjectMetadataParams{
+func (omr *ObjectMetadataRepository) CreateObjectMetadata(
+	ctx context.Context, req *service.CreateObjectMetadataRequest,
+) (int64, error) {
+	tx := psqlutil.TxFromCtx(ctx)
+	q := omr.q
+	if tx != nil {
+		q = omr.q.WithTx(tx)
+	}
+	id, err := q.CreateObjectMetadata(ctx, query.CreateObjectMetadataParams{
 		Name:            req.Name,
 		BucketID:        req.BucketID,
 		LocationGroupID: req.LocationGroupID,
@@ -47,7 +47,12 @@ func (omr *ObjectMetadataRepository) GetObjectMetadataByName(
 	name string,
 	bucketID int64,
 ) (*entity.ObjectMetadata, error) {
-	om, err := omr.q.SelectObjectMetadataByName(ctx, query.SelectObjectMetadataByNameParams{
+	tx := psqlutil.TxFromCtx(ctx)
+	q := omr.q
+	if tx != nil {
+		q = omr.q.WithTx(tx)
+	}
+	om, err := q.SelectObjectMetadataByName(ctx, query.SelectObjectMetadataByNameParams{
 		Name:     name,
 		BucketID: bucketID,
 	})
@@ -70,7 +75,12 @@ func (omr *ObjectMetadataRepository) GetObjectMetadataByName(
 }
 
 func (omr *ObjectMetadataRepository) DeleteObjectMetadata(ctx context.Context, id int64) error {
-	err := omr.q.DeleteObjectMetadata(ctx, id)
+	tx := psqlutil.TxFromCtx(ctx)
+	q := omr.q
+	if tx != nil {
+		q = omr.q.WithTx(tx)
+	}
+	err := q.DeleteObjectMetadata(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete object metadata: %w", err)
 	}
@@ -80,7 +90,12 @@ func (omr *ObjectMetadataRepository) DeleteObjectMetadata(ctx context.Context, i
 func (omr *ObjectMetadataRepository) GetObjectMetadatas(
 	ctx context.Context, req *service.GetObjectMetadatasRequest,
 ) ([]*entity.ObjectMetadata, error) {
-	ret, err := omr.q.SelectObjectMetadatas(ctx, query.SelectObjectMetadatasParams{
+	tx := psqlutil.TxFromCtx(ctx)
+	q := omr.q
+	if tx != nil {
+		q = omr.q.WithTx(tx)
+	}
+	ret, err := q.SelectObjectMetadatas(ctx, query.SelectObjectMetadatasParams{
 		ID:       req.StartFrom,
 		BucketID: req.BucketID,
 		Limit:    int32(req.Limit),

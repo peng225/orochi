@@ -20,12 +20,16 @@ var (
 )
 
 type DatastoreService struct {
+	tx     Transaction
 	dsRepo DatastoreRepository
 	lgRepo LocationGroupRepository
 }
 
-func NewDatastoreService(dsRepo DatastoreRepository, lgRepo LocationGroupRepository) *DatastoreService {
+func NewDatastoreService(
+	tx Transaction, dsRepo DatastoreRepository, lgRepo LocationGroupRepository,
+) *DatastoreService {
 	return &DatastoreService{
+		tx:     tx,
 		dsRepo: dsRepo,
 		lgRepo: lgRepo,
 	}
@@ -39,17 +43,24 @@ func (dss *DatastoreService) CreateDatastore(ctx context.Context, baseURL string
 	if !validURL.MatchString(baseURL) {
 		return 0, errors.Join(fmt.Errorf("invalid baseURL: %s", baseURL), ErrInvalidParameter)
 	}
-	// FIXME: Transaction required.
-	id, err := dss.dsRepo.CreateDatastore(ctx, &CreateDatastoreRequest{
-		BaseURL: baseURL,
+	var id int64
+	err := dss.tx.Do(ctx, func(ctx context.Context) error {
+		var err error
+		id, err = dss.dsRepo.CreateDatastore(ctx, &CreateDatastoreRequest{
+			BaseURL: baseURL,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create datastore: %w", err)
+		}
+
+		err = dss.reconstructLocationGroups(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to reconstruct location groups: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return 0, fmt.Errorf("failed to create datastore: %w", err)
-	}
-
-	err = dss.reconstructLocationGroups(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("failed to reconstruct location groups: %w", err)
+		return 0, fmt.Errorf("transaction failed: %w", err)
 	}
 
 	return id, nil
