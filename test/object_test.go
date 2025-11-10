@@ -14,7 +14,7 @@ import (
 )
 
 func TestObject_CreateAndGet(t *testing.T) {
-	c, err := gwclient.NewClient("http://localhost:8081")
+	c, err := gwclient.NewClient(gatewayBaseURL)
 	require.NoError(t, err)
 
 	bucket := prepareBucket(t)
@@ -34,7 +34,7 @@ func TestObject_CreateAndGet(t *testing.T) {
 }
 
 func TestObject_Delete(t *testing.T) {
-	c, err := gwclient.NewClient("http://localhost:8081")
+	c, err := gwclient.NewClient(gatewayBaseURL)
 	require.NoError(t, err)
 
 	bucket := prepareBucket(t)
@@ -58,7 +58,7 @@ func TestObject_Delete(t *testing.T) {
 }
 
 func TestObject_List(t *testing.T) {
-	c, err := gwclient.NewClient("http://localhost:8081")
+	c, err := gwclient.NewClient(gatewayBaseURL)
 	require.NoError(t, err)
 
 	bucket := prepareBucket(t)
@@ -124,4 +124,173 @@ func TestObject_List(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, objList, 1)
 	require.Equal(t, objects[2], objList[0])
+}
+
+func TestObject_Create_BucketDoesNotExist(t *testing.T) {
+	c, err := gwclient.NewClient(gatewayBaseURL)
+	require.NoError(t, err)
+
+	bucket := "dummy"
+	object := "test-object"
+	resp, err := c.CreateObjectWithBody(t.Context(), bucket, object,
+		"application/octet-stream", strings.NewReader("test-data"))
+	require.NoError(t, err)
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestObject_Create_InvalidParameter(t *testing.T) {
+	c, err := gwclient.NewClient(gatewayBaseURL)
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name   string
+		object string
+	}{
+		{
+			name:   "contains _",
+			object: "test_object",
+		},
+		{
+			name:   "contains /",
+			object: "foo/bar",
+		},
+		{
+			name:   "contains .",
+			object: "invalid.name",
+		},
+	}
+
+	bucket := prepareBucket(t)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			resp, err := c.CreateObjectWithBody(t.Context(), bucket, tc.object,
+				"application/octet-stream", strings.NewReader("test-data"))
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		})
+	}
+}
+
+func TestObject_Get_BucketDoesNotExist(t *testing.T) {
+	c, err := gwclient.NewClient(gatewayBaseURL)
+	require.NoError(t, err)
+
+	bucket := "dummy"
+	object := "test-object"
+	resp, err := c.GetObject(t.Context(), bucket, object)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestObject_Get_InvalidParameter(t *testing.T) {
+	c, err := gwclient.NewClient(gatewayBaseURL)
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name   string
+		object string
+	}{
+		{
+			name:   "contains _",
+			object: "test_object",
+		},
+		{
+			name:   "contains /",
+			object: "foo/bar",
+		},
+		{
+			name:   "contains .",
+			object: "invalid.name",
+		},
+	}
+
+	bucket := prepareBucket(t)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			resp, err := c.GetObject(t.Context(), bucket, tc.object)
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		})
+	}
+}
+
+func TestObject_Get_NotFound(t *testing.T) {
+	c, err := gwclient.NewClient(gatewayBaseURL)
+	require.NoError(t, err)
+
+	bucket := prepareBucket(t)
+	object := "test-object"
+
+	resp, err := c.GetObject(t.Context(), bucket, object)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+func TestObject_Delete_BucketDoesNotExist(t *testing.T) {
+	c, err := gwclient.NewClient(gatewayBaseURL)
+	require.NoError(t, err)
+
+	bucket := "dummy"
+	object := "test-object"
+	resp, err := c.DeleteObject(t.Context(), bucket, object)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestObject_Delete_InvalidParameter(t *testing.T) {
+	c, err := gwclient.NewClient(gatewayBaseURL)
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name   string
+		object string
+	}{
+		{
+			name:   "contains _",
+			object: "test_object",
+		},
+		{
+			name:   "contains /",
+			object: "foo/bar",
+		},
+		{
+			name:   "contains .",
+			object: "invalid.name",
+		},
+	}
+
+	bucket := prepareBucket(t)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			resp, err := c.DeleteObject(t.Context(), bucket, tc.object)
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		})
+	}
+}
+
+func TestObject_List_BucketDoesNotExist(t *testing.T) {
+	c, err := gwclient.NewClient(gatewayBaseURL)
+	require.NoError(t, err)
+
+	bucket := "dummy"
+	resp, err := c.ListObjects(t.Context(), bucket, nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestObject_List_TooLargeLimitParam(t *testing.T) {
+	c, err := gwclient.NewClient(gatewayBaseURL)
+	require.NoError(t, err)
+
+	bucket := prepareBucket(t)
+	limit := 1001
+	resp, err := c.ListObjects(t.Context(), bucket, &gwclient.ListObjectsParams{
+		Limit: &limit,
+	})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }

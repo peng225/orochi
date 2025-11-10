@@ -10,6 +10,7 @@ import (
 	"math"
 	randv2 "math/rand/v2"
 	"path/filepath"
+	"regexp"
 	"slices"
 
 	"github.com/peng225/orochi/internal/entity"
@@ -19,6 +20,10 @@ import (
 
 const (
 	minECChunkSizeInByte = 4 * 1024
+)
+
+var (
+	validObjectName = regexp.MustCompile(`^[a-zA-Z0-9-]+$`)
 )
 
 type ObjectService struct {
@@ -64,6 +69,9 @@ func (osvc *ObjectService) Refresh(ctx context.Context) error {
 
 func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucket string, r io.Reader) error {
 	slog.Debug("ObjectService::CreateObject called.", "name", name, "bucket", bucket)
+	if !validObjectName.MatchString(name) {
+		return errors.Join(fmt.Errorf("invalid object name: %s", name), ErrInvalidParameter)
+	}
 	// FIXME: Should avoid per request refresh for performance.
 	err := osvc.Refresh(ctx)
 	if err != nil {
@@ -113,6 +121,9 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucket string
 
 func (osvc *ObjectService) GetObject(ctx context.Context, name, bucket string) ([]byte, error) {
 	slog.Debug("ObjectService::GetObject called.", "name", name, "bucket", bucket)
+	if !validObjectName.MatchString(name) {
+		return nil, errors.Join(fmt.Errorf("invalid object name: %s", name), ErrInvalidParameter)
+	}
 	om, err := osvc.getObjectMetadataByName(ctx, name, bucket)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get object metadata: %w", err)
@@ -206,6 +217,9 @@ func (osvc *ObjectService) getObjectMetadataByName(
 
 func (osvc *ObjectService) DeleteObject(ctx context.Context, name, bucket string, r io.Reader) error {
 	slog.Debug("ObjectService::DeleteObject called.", "name", name, "bucket", bucket)
+	if !validObjectName.MatchString(name) {
+		return errors.Join(fmt.Errorf("invalid object name: %s", name), ErrInvalidParameter)
+	}
 	om, err := osvc.getObjectMetadataByName(ctx, name, bucket)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {

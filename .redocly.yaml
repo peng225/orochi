@@ -3,3 +3,4 @@ extends:
 
 rules:
   no-empty-servers: off
+  operation-4xx-response: off
