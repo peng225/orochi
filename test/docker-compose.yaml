@@ -43,6 +43,8 @@ services:
       - testnet
     ports:
       - 8082:8082
+    volumes:
+      - ./data/datastore0:/data
   datastore1:
     image: ghcr.io/peng225/orochi:latest
     container_name: datastore1
@@ -51,6 +53,8 @@ services:
       - testnet
     ports:
       - 8083:8083
+    volumes:
+      - ./data/datastore1:/data
   datastore2:
     image: ghcr.io/peng225/orochi:latest
     container_name: datastore2
@@ -59,6 +63,8 @@ services:
       - testnet
     ports:
       - 8084:8084
+    volumes:
+      - ./data/datastore2:/data
   gateway:
     image: ghcr.io/peng225/orochi:latest
     container_name: gateway
