@@ -14,9 +14,6 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
-// Bucket defines model for bucket.
-type Bucket = string
-
 // Object defines model for object.
 type Object = string
 
@@ -94,17 +91,17 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 // The interface specification for the client above.
 type ClientInterface interface {
 	// DeleteObject request
-	DeleteObject(ctx context.Context, bucket Bucket, object Object, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeleteObject(ctx context.Context, object Object, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetObject request
-	GetObject(ctx context.Context, bucket Bucket, object Object, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetObject(ctx context.Context, object Object, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// CreateObjectWithBody request with any body
-	CreateObjectWithBody(ctx context.Context, bucket Bucket, object Object, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateObjectWithBody(ctx context.Context, object Object, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
-func (c *Client) DeleteObject(ctx context.Context, bucket Bucket, object Object, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteObjectRequest(c.Server, bucket, object)
+func (c *Client) DeleteObject(ctx context.Context, object Object, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteObjectRequest(c.Server, object)
 	if err != nil {
 		return nil, err
 	}
@@ -115,8 +112,8 @@ func (c *Client) DeleteObject(ctx context.Context, bucket Bucket, object Object,
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetObject(ctx context.Context, bucket Bucket, object Object, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetObjectRequest(c.Server, bucket, object)
+func (c *Client) GetObject(ctx context.Context, object Object, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetObjectRequest(c.Server, object)
 	if err != nil {
 		return nil, err
 	}
@@ -127,8 +124,8 @@ func (c *Client) GetObject(ctx context.Context, bucket Bucket, object Object, re
 	return c.Client.Do(req)
 }
 
-func (c *Client) CreateObjectWithBody(ctx context.Context, bucket Bucket, object Object, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateObjectRequestWithBody(c.Server, bucket, object, contentType, body)
+func (c *Client) CreateObjectWithBody(ctx context.Context, object Object, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateObjectRequestWithBody(c.Server, object, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -140,19 +137,12 @@ func (c *Client) CreateObjectWithBody(ctx context.Context, bucket Bucket, object
 }
 
 // NewDeleteObjectRequest generates requests for DeleteObject
-func NewDeleteObjectRequest(server string, bucket Bucket, object Object) (*http.Request, error) {
+func NewDeleteObjectRequest(server string, object Object) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "bucket", runtime.ParamLocationPath, bucket)
-	if err != nil {
-		return nil, err
-	}
-
-	var pathParam1 string
-
-	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "object", runtime.ParamLocationPath, object)
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "object", runtime.ParamLocationPath, object)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +152,7 @@ func NewDeleteObjectRequest(server string, bucket Bucket, object Object) (*http.
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/%s/%s", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -181,19 +171,12 @@ func NewDeleteObjectRequest(server string, bucket Bucket, object Object) (*http.
 }
 
 // NewGetObjectRequest generates requests for GetObject
-func NewGetObjectRequest(server string, bucket Bucket, object Object) (*http.Request, error) {
+func NewGetObjectRequest(server string, object Object) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "bucket", runtime.ParamLocationPath, bucket)
-	if err != nil {
-		return nil, err
-	}
-
-	var pathParam1 string
-
-	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "object", runtime.ParamLocationPath, object)
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "object", runtime.ParamLocationPath, object)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +186,7 @@ func NewGetObjectRequest(server string, bucket Bucket, object Object) (*http.Req
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/%s/%s", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -222,19 +205,12 @@ func NewGetObjectRequest(server string, bucket Bucket, object Object) (*http.Req
 }
 
 // NewCreateObjectRequestWithBody generates requests for CreateObject with any type of body
-func NewCreateObjectRequestWithBody(server string, bucket Bucket, object Object, contentType string, body io.Reader) (*http.Request, error) {
+func NewCreateObjectRequestWithBody(server string, object Object, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "bucket", runtime.ParamLocationPath, bucket)
-	if err != nil {
-		return nil, err
-	}
-
-	var pathParam1 string
-
-	pathParam1, err = runtime.StyleParamWithLocation("simple", false, "object", runtime.ParamLocationPath, object)
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "object", runtime.ParamLocationPath, object)
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +220,7 @@ func NewCreateObjectRequestWithBody(server string, bucket Bucket, object Object,
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/%s/%s", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -308,13 +284,13 @@ func WithBaseURL(baseURL string) ClientOption {
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
 	// DeleteObjectWithResponse request
-	DeleteObjectWithResponse(ctx context.Context, bucket Bucket, object Object, reqEditors ...RequestEditorFn) (*DeleteObjectResponse, error)
+	DeleteObjectWithResponse(ctx context.Context, object Object, reqEditors ...RequestEditorFn) (*DeleteObjectResponse, error)
 
 	// GetObjectWithResponse request
-	GetObjectWithResponse(ctx context.Context, bucket Bucket, object Object, reqEditors ...RequestEditorFn) (*GetObjectResponse, error)
+	GetObjectWithResponse(ctx context.Context, object Object, reqEditors ...RequestEditorFn) (*GetObjectResponse, error)
 
 	// CreateObjectWithBodyWithResponse request with any body
-	CreateObjectWithBodyWithResponse(ctx context.Context, bucket Bucket, object Object, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateObjectResponse, error)
+	CreateObjectWithBodyWithResponse(ctx context.Context, object Object, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateObjectResponse, error)
 }
 
 type DeleteObjectResponse struct {
@@ -381,8 +357,8 @@ func (r CreateObjectResponse) StatusCode() int {
 }
 
 // DeleteObjectWithResponse request returning *DeleteObjectResponse
-func (c *ClientWithResponses) DeleteObjectWithResponse(ctx context.Context, bucket Bucket, object Object, reqEditors ...RequestEditorFn) (*DeleteObjectResponse, error) {
-	rsp, err := c.DeleteObject(ctx, bucket, object, reqEditors...)
+func (c *ClientWithResponses) DeleteObjectWithResponse(ctx context.Context, object Object, reqEditors ...RequestEditorFn) (*DeleteObjectResponse, error) {
+	rsp, err := c.DeleteObject(ctx, object, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -390,8 +366,8 @@ func (c *ClientWithResponses) DeleteObjectWithResponse(ctx context.Context, buck
 }
 
 // GetObjectWithResponse request returning *GetObjectResponse
-func (c *ClientWithResponses) GetObjectWithResponse(ctx context.Context, bucket Bucket, object Object, reqEditors ...RequestEditorFn) (*GetObjectResponse, error) {
-	rsp, err := c.GetObject(ctx, bucket, object, reqEditors...)
+func (c *ClientWithResponses) GetObjectWithResponse(ctx context.Context, object Object, reqEditors ...RequestEditorFn) (*GetObjectResponse, error) {
+	rsp, err := c.GetObject(ctx, object, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -399,8 +375,8 @@ func (c *ClientWithResponses) GetObjectWithResponse(ctx context.Context, bucket 
 }
 
 // CreateObjectWithBodyWithResponse request with arbitrary body returning *CreateObjectResponse
-func (c *ClientWithResponses) CreateObjectWithBodyWithResponse(ctx context.Context, bucket Bucket, object Object, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateObjectResponse, error) {
-	rsp, err := c.CreateObjectWithBody(ctx, bucket, object, contentType, body, reqEditors...)
+func (c *ClientWithResponses) CreateObjectWithBodyWithResponse(ctx context.Context, object Object, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateObjectResponse, error) {
+	rsp, err := c.CreateObjectWithBody(ctx, object, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}

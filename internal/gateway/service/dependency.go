@@ -16,9 +16,9 @@ type DatastoreRepository interface {
 }
 
 type ChunkRepository interface {
-	CreateObject(ctx context.Context, bucket, object string, data io.Reader) error
-	GetObject(ctx context.Context, bucket, object string) (io.ReadCloser, error)
-	DeleteObject(ctx context.Context, bucket, object string) error
+	CreateObject(ctx context.Context, object string, data io.Reader) error
+	GetObject(ctx context.Context, object string) (io.ReadCloser, error)
+	DeleteObject(ctx context.Context, object string) error
 }
 
 type ChunkRepositoryFactory interface {
