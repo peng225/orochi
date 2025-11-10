@@ -17,6 +17,7 @@ jobs:
         go-version-file: go.mod
     - name: Generate and check diff
       run: |
+        go mod tidy
         make generate
         make html
         git diff --exit-code
