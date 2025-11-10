@@ -85,8 +85,6 @@ paths:
       responses:
         '202':
           description: Bucket delete request accepted
-        '400':
-          description: Bad request
 
 components:
   schemas:

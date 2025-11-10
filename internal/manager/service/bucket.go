@@ -3,11 +3,16 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"regexp"
 
 	"github.com/peng225/orochi/internal/entity"
+)
+
+var (
+	validBucketName = regexp.MustCompile(`^[a-zA-Z0-9-]+$`)
 )
 
 type BucketService struct {
@@ -23,8 +28,8 @@ func NewBucketService(bucketRepo BucketRepository, jobRepo JobRepository) *Bucke
 }
 
 func (bs *BucketService) CreateBucket(ctx context.Context, name string) (int64, error) {
-	if !isValidBucketName(name) {
-		return 0, ErrInvalidParameter
+	if !validBucketName.MatchString(name) {
+		return 0, errors.Join(fmt.Errorf("invalid bucket name: %s", name), ErrInvalidParameter)
 	}
 	id, err := bs.bucketRepo.CreateBucket(ctx, &CreateBucketRequest{
 		Name: name,
@@ -33,11 +38,6 @@ func (bs *BucketService) CreateBucket(ctx context.Context, name string) (int64, 
 		return 0, fmt.Errorf("failed to create bucket: %w", err)
 	}
 	return id, nil
-}
-
-func isValidBucketName(s string) bool {
-	re := regexp.MustCompile(`^[a-zA-Z0-9-]+$`)
-	return re.MatchString(s)
 }
 
 func (bs *BucketService) GetBucket(ctx context.Context, id int64) (*entity.Bucket, error) {
