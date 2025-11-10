@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/peng225/orochi/internal/gateway/api/client"
+	"github.com/peng225/orochi/internal/datastore/api/client"
 	"github.com/peng225/orochi/internal/gateway/service"
 )
 
@@ -24,8 +24,8 @@ func NewClient(baseURL string) *Client {
 	}
 }
 
-func (c *Client) CreateObject(ctx context.Context, bucket, object string, data io.Reader) error {
-	res, err := c.c.CreateObjectWithBody(ctx, bucket, object, "application/octet-stream", data)
+func (c *Client) CreateObject(ctx context.Context, object string, data io.Reader) error {
+	res, err := c.c.CreateObjectWithBody(ctx, object, "application/octet-stream", data)
 	if err != nil {
 		return fmt.Errorf("CreateObject failed: %w", err)
 	}
@@ -38,8 +38,8 @@ func (c *Client) CreateObject(ctx context.Context, bucket, object string, data i
 	return nil
 }
 
-func (c *Client) GetObject(ctx context.Context, bucket, object string) (io.ReadCloser, error) {
-	res, err := c.c.GetObject(ctx, bucket, object)
+func (c *Client) GetObject(ctx context.Context, object string) (io.ReadCloser, error) {
+	res, err := c.c.GetObject(ctx, object)
 	if err != nil {
 		return nil, fmt.Errorf("GetObject failed: %w", err)
 	}
@@ -54,8 +54,8 @@ func (c *Client) GetObject(ctx context.Context, bucket, object string) (io.ReadC
 	return res.Body, nil
 }
 
-func (c *Client) DeleteObject(ctx context.Context, bucket, object string) error {
-	res, err := c.c.DeleteObject(ctx, bucket, object)
+func (c *Client) DeleteObject(ctx context.Context, object string) error {
+	res, err := c.c.DeleteObject(ctx, object)
 	if err != nil {
 		return fmt.Errorf("DeleteObject failed: %w", err)
 	}

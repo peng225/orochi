@@ -12,23 +12,20 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
-// Bucket defines model for bucket.
-type Bucket = string
-
 // Object defines model for object.
 type Object = string
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Delete a object
-	// (DELETE /{bucket}/{object})
-	DeleteObject(w http.ResponseWriter, r *http.Request, bucket Bucket, object Object)
+	// (DELETE /{object})
+	DeleteObject(w http.ResponseWriter, r *http.Request, object Object)
 	// Get a object
-	// (GET /{bucket}/{object})
-	GetObject(w http.ResponseWriter, r *http.Request, bucket Bucket, object Object)
+	// (GET /{object})
+	GetObject(w http.ResponseWriter, r *http.Request, object Object)
 	// Create a object
-	// (PUT /{bucket}/{object})
-	CreateObject(w http.ResponseWriter, r *http.Request, bucket Bucket, object Object)
+	// (PUT /{object})
+	CreateObject(w http.ResponseWriter, r *http.Request, object Object)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -45,15 +42,6 @@ func (siw *ServerInterfaceWrapper) DeleteObject(w http.ResponseWriter, r *http.R
 
 	var err error
 
-	// ------------- Path parameter "bucket" -------------
-	var bucket Bucket
-
-	err = runtime.BindStyledParameterWithOptions("simple", "bucket", r.PathValue("bucket"), &bucket, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bucket", Err: err})
-		return
-	}
-
 	// ------------- Path parameter "object" -------------
 	var object Object
 
@@ -64,7 +52,7 @@ func (siw *ServerInterfaceWrapper) DeleteObject(w http.ResponseWriter, r *http.R
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DeleteObject(w, r, bucket, object)
+		siw.Handler.DeleteObject(w, r, object)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -79,15 +67,6 @@ func (siw *ServerInterfaceWrapper) GetObject(w http.ResponseWriter, r *http.Requ
 
 	var err error
 
-	// ------------- Path parameter "bucket" -------------
-	var bucket Bucket
-
-	err = runtime.BindStyledParameterWithOptions("simple", "bucket", r.PathValue("bucket"), &bucket, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bucket", Err: err})
-		return
-	}
-
 	// ------------- Path parameter "object" -------------
 	var object Object
 
@@ -98,7 +77,7 @@ func (siw *ServerInterfaceWrapper) GetObject(w http.ResponseWriter, r *http.Requ
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetObject(w, r, bucket, object)
+		siw.Handler.GetObject(w, r, object)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -113,15 +92,6 @@ func (siw *ServerInterfaceWrapper) CreateObject(w http.ResponseWriter, r *http.R
 
 	var err error
 
-	// ------------- Path parameter "bucket" -------------
-	var bucket Bucket
-
-	err = runtime.BindStyledParameterWithOptions("simple", "bucket", r.PathValue("bucket"), &bucket, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bucket", Err: err})
-		return
-	}
-
 	// ------------- Path parameter "object" -------------
 	var object Object
 
@@ -132,7 +102,7 @@ func (siw *ServerInterfaceWrapper) CreateObject(w http.ResponseWriter, r *http.R
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CreateObject(w, r, bucket, object)
+		siw.Handler.CreateObject(w, r, object)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -262,9 +232,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
-	m.HandleFunc("DELETE "+options.BaseURL+"/{bucket}/{object}", wrapper.DeleteObject)
-	m.HandleFunc("GET "+options.BaseURL+"/{bucket}/{object}", wrapper.GetObject)
-	m.HandleFunc("PUT "+options.BaseURL+"/{bucket}/{object}", wrapper.CreateObject)
+	m.HandleFunc("DELETE "+options.BaseURL+"/{object}", wrapper.DeleteObject)
+	m.HandleFunc("GET "+options.BaseURL+"/{object}", wrapper.GetObject)
+	m.HandleFunc("PUT "+options.BaseURL+"/{object}", wrapper.CreateObject)
 
 	return m
 }

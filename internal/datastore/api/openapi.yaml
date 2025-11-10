@@ -9,12 +9,11 @@ info:
 
 security: []
 paths:
-  /{bucket}/{object}:
+  /{object}:
     put:
       summary: Create a object
       operationId: createObject
       parameters:
-        - $ref: '#/components/parameters/bucket'
         - $ref: '#/components/parameters/object'
       requestBody:
         required: true
@@ -27,13 +26,12 @@ paths:
         '201':
           description: Object created successfully
         '400':
-          description: Bucket should be created first
+          description: Bad request
 
     get:
       summary: Get a object
       operationId: getObject
       parameters:
-        - $ref: '#/components/parameters/bucket'
         - $ref: '#/components/parameters/object'
       responses:
         '200':
@@ -44,7 +42,7 @@ paths:
                 type: string
                 format: binary
         '400':
-          description: Bucket should be created first
+          description: Bad request
         '404':
           description: Object not found
 
@@ -52,13 +50,12 @@ paths:
       summary: Delete a object
       operationId: deleteObject
       parameters:
-        - $ref: '#/components/parameters/bucket'
         - $ref: '#/components/parameters/object'
       responses:
         '204':
           description: Object deleted successfully
         '400':
-          description: Bucket should be created first
+          description: Bad request
 
 components:
   schemas:
@@ -67,12 +64,6 @@ components:
       items:
         type: string
   parameters:
-    bucket:
-      name: bucket
-      in: path
-      required: true
-      schema:
-        type: string
     object:
       name: object
       in: path

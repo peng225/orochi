@@ -3,5 +3,6 @@ package service
 import "fmt"
 
 var (
-	ErrObjectNotFound error = fmt.Errorf("object not found")
+	ErrObjectNotFound   error = fmt.Errorf("object not found")
+	ErrInvalidParameter error = fmt.Errorf("invalid parameter")
 )

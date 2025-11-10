@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"math"
 	randv2 "math/rand/v2"
+	"path/filepath"
 	"slices"
 
 	"github.com/peng225/orochi/internal/entity"
@@ -102,7 +103,7 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucket string
 	}
 	// FIXME: parallelize.
 	for i, ds := range lg.CurrentDatastores {
-		err = osvc.chunkRepos[ds].CreateObject(ctx, bucket, name, bytes.NewBuffer(codes[i]))
+		err = osvc.chunkRepos[ds].CreateObject(ctx, filepath.Join(bucket, name), bytes.NewBuffer(codes[i]))
 		if err != nil {
 			return fmt.Errorf("CreateObject failed: %w", err)
 		}
@@ -129,7 +130,7 @@ func (osvc *ObjectService) GetObject(ctx context.Context, name, bucket string) (
 		i := i
 		ds := ds
 		eg.Go(func() error {
-			rc, err := osvc.chunkRepos[ds].GetObject(ctx, bucket, name)
+			rc, err := osvc.chunkRepos[ds].GetObject(ctx, filepath.Join(bucket, name))
 			if err != nil {
 				return fmt.Errorf("GetObject failed: %w", err)
 			}
@@ -221,7 +222,7 @@ func (osvc *ObjectService) DeleteObject(ctx context.Context, name, bucket string
 		return fmt.Errorf("unsupported behavior")
 	}
 	for _, ds := range lg.CurrentDatastores {
-		err = osvc.chunkRepos[ds].DeleteObject(ctx, bucket, name)
+		err = osvc.chunkRepos[ds].DeleteObject(ctx, filepath.Join(bucket, name))
 		if err != nil {
 			return fmt.Errorf("DeleteObject failed: %w", err)
 		}

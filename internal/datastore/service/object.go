@@ -7,13 +7,17 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
+	"regexp"
 )
 
 const (
 	// FIXME: parametrize.
 	dataRoot    = "/data"
 	maxDataSize = 4 * 1024 * 1024 * 1024
+)
+
+var (
+	validObjectPath = regexp.MustCompile(`^([A-Za-z0-9-]+(/[A-Za-z0-9-]+)*)$`)
 )
 
 type ObjectService struct {
@@ -23,29 +27,24 @@ func NewObjectStore() *ObjectService {
 	return &ObjectService{}
 }
 
-func (osvc *ObjectService) CreateObject(bucket, object string, data io.Reader) error {
-	slog.Debug("ObjectService::CreateObject called.", "bucket", bucket, "object", object)
-	err := checkBucketFormat(bucket)
-	if err != nil {
-		return err
-	}
-	err = checkObjectFormat(object)
-	if err != nil {
-		return err
+func (osvc *ObjectService) CreateObject(object string, data io.Reader) error {
+	slog.Debug("ObjectService::CreateObject called.", "object", object)
+	if !validObjectPath.MatchString(object) {
+		return errors.Join(
+			fmt.Errorf("invalid object path: %s", object),
+			ErrInvalidParameter,
+		)
 	}
 
-	bucketPath := filepath.Join(dataRoot, bucket)
-	objectPath := filepath.Join(bucketPath, object)
-
-	if err := os.MkdirAll(bucketPath, 0755); err != nil {
+	path := filepath.Join(dataRoot, object)
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return fmt.Errorf("failed to create bucket dir: %w", err)
 	}
-
-	if err := os.Remove(objectPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("failed to remove existing file: %w", err)
 	}
 
-	tmpPath := objectPath + ".tmp"
+	tmpPath := path + ".tmp"
 	f, err := os.Create(tmpPath)
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %w", err)
@@ -80,24 +79,22 @@ func (osvc *ObjectService) CreateObject(bucket, object string, data io.Reader) e
 	}
 	slog.Debug("File synced.")
 
-	if err := os.Rename(tmpPath, objectPath); err != nil {
+	if err := os.Rename(tmpPath, path); err != nil {
 		return fmt.Errorf("failed to rename file: %w", err)
 	}
 
 	return nil
 }
 
-func (osvc *ObjectService) GetObject(bucket, object string) ([]byte, error) {
-	slog.Debug("ObjectService::GetObject called.", "bucket", bucket, "object", object)
-	err := checkBucketFormat(bucket)
-	if err != nil {
-		return nil, err
+func (osvc *ObjectService) GetObject(object string) ([]byte, error) {
+	slog.Debug("ObjectService::GetObject called.", "object", object)
+	if !validObjectPath.MatchString(object) {
+		return nil, errors.Join(
+			fmt.Errorf("invalid object path: %s", object),
+			ErrInvalidParameter,
+		)
 	}
-	err = checkObjectFormat(object)
-	if err != nil {
-		return nil, err
-	}
-	path := filepath.Join(dataRoot, bucket, object)
+	path := filepath.Join(dataRoot, object)
 
 	f, err := os.Open(path)
 	if err != nil {
@@ -116,18 +113,16 @@ func (osvc *ObjectService) GetObject(bucket, object string) ([]byte, error) {
 	return data, nil
 }
 
-func (osvc *ObjectService) DeleteObject(bucket, object string) error {
-	slog.Debug("ObjectService::DeleteObject called.", "bucket", bucket, "object", object)
-	err := checkBucketFormat(bucket)
-	if err != nil {
-		return err
+func (osvc *ObjectService) DeleteObject(object string) error {
+	slog.Debug("ObjectService::DeleteObject called.", "object", object)
+	if !validObjectPath.MatchString(object) {
+		return errors.Join(
+			fmt.Errorf("invalid object path: %s", object),
+			ErrInvalidParameter,
+		)
 	}
-	err = checkObjectFormat(object)
-	if err != nil {
-		return err
-	}
-	path := filepath.Join(dataRoot, bucket, object)
-	err = os.Remove(path)
+	path := filepath.Join(dataRoot, object)
+	err := os.Remove(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil
@@ -138,22 +133,5 @@ func (osvc *ObjectService) DeleteObject(bucket, object string) error {
 	// FIXME: object may include/the/intermediate/directories.
 	// In that case, those directory may be empty, and should be deleted.
 
-	return nil
-}
-
-func checkBucketFormat(bucket string) error {
-	if strings.Contains(bucket, "/") {
-		return fmt.Errorf("invalid bucket format")
-	}
-	return nil
-}
-
-func checkObjectFormat(object string) error {
-	items := strings.Split(object, "/")
-	for _, item := range items {
-		if len(item) == 0 {
-			return fmt.Errorf("invalid object format")
-		}
-	}
 	return nil
 }
