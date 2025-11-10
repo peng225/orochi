@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"regexp"
@@ -12,6 +13,10 @@ import (
 
 const (
 	targetLGNumPerDatastore = 100
+)
+
+var (
+	validURL = regexp.MustCompile(`^https?://[a-zA-Z0-9.-]+(:[0-9]+)?$`)
 )
 
 type DatastoreService struct {
@@ -31,8 +36,8 @@ func (dss *DatastoreService) GetDatastore(ctx context.Context, id int64) (*entit
 }
 
 func (dss *DatastoreService) CreateDatastore(ctx context.Context, baseURL string) (int64, error) {
-	if !isValidURL(baseURL) {
-		return 0, ErrInvalidParameter
+	if !validURL.MatchString(baseURL) {
+		return 0, errors.Join(fmt.Errorf("invalid baseURL: %s", baseURL), ErrInvalidParameter)
 	}
 	// FIXME: Transaction required.
 	id, err := dss.dsRepo.CreateDatastore(ctx, &CreateDatastoreRequest{
@@ -112,11 +117,6 @@ func (dss *DatastoreService) expandLocationGroup(ctx context.Context, lgs []*ent
 		}
 	}
 	return nil
-}
-
-func isValidURL(s string) bool {
-	re := regexp.MustCompile(`^https?://[a-zA-Z0-9.-]+(:[0-9]+)?$`)
-	return re.MatchString(s)
 }
 
 func permutation(n, k, upperBound int) int {
