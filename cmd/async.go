@@ -10,6 +10,7 @@ import (
 	"github.com/peng225/orochi/internal/async/infra/postgresql"
 	"github.com/peng225/orochi/internal/async/process"
 	"github.com/peng225/orochi/internal/gateway/api/client"
+	"github.com/peng225/orochi/internal/pkg/psqlutil"
 	"github.com/spf13/cobra"
 )
 
@@ -44,17 +45,18 @@ to quickly create a Cobra application.`,
 			os.Exit(1)
 		}
 
-		bucketRepo := postgresql.NewBucketRepository()
-		defer bucketRepo.Close()
-		jobRepo := postgresql.NewJobRepository()
-		defer jobRepo.Close()
+		db := psqlutil.InitDB()
+		defer db.Close()
+		tx := psqlutil.NewTransaction(db)
+		bucketRepo := postgresql.NewBucketRepository(db)
+		jobRepo := postgresql.NewJobRepository(db)
 		// FIXME: should use all gateway base URLs.
 		gwClient, err := client.NewClient(gwBaseURLs[0])
 		if err != nil {
 			panic(err)
 		}
 
-		p := process.NewProcessor(period, jobRepo, bucketRepo, gwClient)
+		p := process.NewProcessor(period, tx, jobRepo, bucketRepo, gwClient)
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 		defer stop()
 		p.Start(ctx)

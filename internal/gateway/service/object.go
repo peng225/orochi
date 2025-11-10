@@ -27,6 +27,7 @@ var (
 )
 
 type ObjectService struct {
+	tx         Transaction
 	chunkRepos map[int64]ChunkRepository
 	crFactory  ChunkRepositoryFactory
 	dsRepo     DatastoreRepository
@@ -36,6 +37,7 @@ type ObjectService struct {
 }
 
 func NewObjectStore(
+	tx Transaction,
 	chunkRepos map[int64]ChunkRepository,
 	crFactory ChunkRepositoryFactory,
 	dsRepo DatastoreRepository,
@@ -47,6 +49,7 @@ func NewObjectStore(
 		chunkRepos = make(map[int64]ChunkRepository)
 	}
 	return &ObjectService{
+		tx:         tx,
 		chunkRepos: chunkRepos,
 		crFactory:  crFactory,
 		dsRepo:     dsRepo,
@@ -77,44 +80,51 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucket string
 	if err != nil {
 		return fmt.Errorf("failed to refresh: %w", err)
 	}
-	om, err := osvc.getObjectMetadataByName(ctx, name, bucket)
-	if err != nil {
-		if !errors.Is(err, ErrNotFound) {
-			return fmt.Errorf("failed to get object metadata by name: %w", err)
-		}
-		_, err := osvc.createObjectMetadata(ctx, name, bucket)
+
+	err = osvc.tx.Do(ctx, func(ctx context.Context) error {
+		om, err := osvc.getObjectMetadataByName(ctx, name, bucket)
 		if err != nil {
-			return fmt.Errorf("failed to create object metadata: %w", err)
+			if !errors.Is(err, ErrNotFound) {
+				return fmt.Errorf("failed to get object metadata by name: %w", err)
+			}
+			_, err := osvc.createObjectMetadata(ctx, name, bucket)
+			if err != nil {
+				return fmt.Errorf("failed to create object metadata: %w", err)
+			}
+			om, err = osvc.getObjectMetadataByName(ctx, name, bucket)
+			if err != nil {
+				return fmt.Errorf("failed to get object metadata: %w", err)
+			}
 		}
-		om, err = osvc.getObjectMetadataByName(ctx, name, bucket)
+		lg, err := osvc.lgRepo.GetLocationGroup(ctx, om.LocationGroupID)
 		if err != nil {
-			return fmt.Errorf("failed to get object metadata: %w", err)
+			return fmt.Errorf("failed to get location group: %w", err)
 		}
-	}
-	lg, err := osvc.lgRepo.GetLocationGroup(ctx, om.LocationGroupID)
-	if err != nil {
-		return fmt.Errorf("failed to get location group: %w", err)
-	}
-	if !slices.Equal(lg.CurrentDatastores, lg.DesiredDatastores) {
-		// FIXME: double write.
-		return fmt.Errorf("unsupported behavior")
-	}
-	data, err := io.ReadAll(r)
-	if err != nil {
-		return fmt.Errorf("failed to read data: %w", err)
-	}
-	// Should remove the assumption of 2D1P.
-	m := ec.NewManager(2, 1, minECChunkSizeInByte)
-	codes, err := m.Encode(data)
-	if err != nil {
-		return fmt.Errorf("failed to encode: %w", err)
-	}
-	// FIXME: parallelize.
-	for i, ds := range lg.CurrentDatastores {
-		err = osvc.chunkRepos[ds].CreateObject(ctx, filepath.Join(bucket, name), bytes.NewBuffer(codes[i]))
+		if !slices.Equal(lg.CurrentDatastores, lg.DesiredDatastores) {
+			// FIXME: double write.
+			return fmt.Errorf("unsupported behavior")
+		}
+		data, err := io.ReadAll(r)
 		if err != nil {
-			return fmt.Errorf("CreateObject failed: %w", err)
+			return fmt.Errorf("failed to read data: %w", err)
 		}
+		// Should remove the assumption of 2D1P.
+		m := ec.NewManager(2, 1, minECChunkSizeInByte)
+		codes, err := m.Encode(data)
+		if err != nil {
+			return fmt.Errorf("failed to encode: %w", err)
+		}
+		// FIXME: parallelize.
+		for i, ds := range lg.CurrentDatastores {
+			err = osvc.chunkRepos[ds].CreateObject(ctx, filepath.Join(bucket, name), bytes.NewBuffer(codes[i]))
+			if err != nil {
+				return fmt.Errorf("CreateObject failed: %w", err)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("transaction failed: %w", err)
 	}
 	return nil
 }
@@ -124,13 +134,21 @@ func (osvc *ObjectService) GetObject(ctx context.Context, name, bucket string) (
 	if !validObjectName.MatchString(name) {
 		return nil, errors.Join(fmt.Errorf("invalid object name: %s", name), ErrInvalidParameter)
 	}
-	om, err := osvc.getObjectMetadataByName(ctx, name, bucket)
+
+	var lg *entity.LocationGroup
+	err := osvc.tx.Do(ctx, func(ctx context.Context) error {
+		om, err := osvc.getObjectMetadataByName(ctx, name, bucket)
+		if err != nil {
+			return fmt.Errorf("failed to get object metadata: %w", err)
+		}
+		lg, err = osvc.lgRepo.GetLocationGroup(ctx, om.LocationGroupID)
+		if err != nil {
+			return fmt.Errorf("failed to get location group: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get object metadata: %w", err)
-	}
-	lg, err := osvc.lgRepo.GetLocationGroup(ctx, om.LocationGroupID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get location group: %w", err)
+		return nil, fmt.Errorf("transaction failed: %w", err)
 	}
 
 	eg := new(errgroup.Group)
@@ -220,30 +238,37 @@ func (osvc *ObjectService) DeleteObject(ctx context.Context, name, bucket string
 	if !validObjectName.MatchString(name) {
 		return errors.Join(fmt.Errorf("invalid object name: %s", name), ErrInvalidParameter)
 	}
-	om, err := osvc.getObjectMetadataByName(ctx, name, bucket)
-	if err != nil {
-		if errors.Is(err, ErrNotFound) {
-			return nil
-		}
-		return fmt.Errorf("failed to get object metadata by name: %w", err)
-	}
-	lg, err := osvc.lgRepo.GetLocationGroup(ctx, om.LocationGroupID)
-	if err != nil {
-		return fmt.Errorf("failed to get location group: %w", err)
-	}
-	if !slices.Equal(lg.CurrentDatastores, lg.DesiredDatastores) {
-		// FIXME: double delete.
-		return fmt.Errorf("unsupported behavior")
-	}
-	for _, ds := range lg.CurrentDatastores {
-		err = osvc.chunkRepos[ds].DeleteObject(ctx, filepath.Join(bucket, name))
+
+	err := osvc.tx.Do(ctx, func(ctx context.Context) error {
+		om, err := osvc.getObjectMetadataByName(ctx, name, bucket)
 		if err != nil {
-			return fmt.Errorf("DeleteObject failed: %w", err)
+			if errors.Is(err, ErrNotFound) {
+				return nil
+			}
+			return fmt.Errorf("failed to get object metadata by name: %w", err)
 		}
-	}
-	err = osvc.omRepo.DeleteObjectMetadata(ctx, om.ID)
+		lg, err := osvc.lgRepo.GetLocationGroup(ctx, om.LocationGroupID)
+		if err != nil {
+			return fmt.Errorf("failed to get location group: %w", err)
+		}
+		if !slices.Equal(lg.CurrentDatastores, lg.DesiredDatastores) {
+			// FIXME: double delete.
+			return fmt.Errorf("unsupported behavior")
+		}
+		for _, ds := range lg.CurrentDatastores {
+			err = osvc.chunkRepos[ds].DeleteObject(ctx, filepath.Join(bucket, name))
+			if err != nil {
+				return fmt.Errorf("DeleteObject failed: %w", err)
+			}
+		}
+		err = osvc.omRepo.DeleteObjectMetadata(ctx, om.ID)
+		if err != nil {
+			return fmt.Errorf("failed to delete object metadata: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return fmt.Errorf("failed to delete object metadata: %w", err)
+		return fmt.Errorf("transaction failed: %w", err)
 	}
 	return nil
 }

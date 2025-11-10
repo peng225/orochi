@@ -10,6 +10,7 @@ import (
 	"github.com/peng225/orochi/internal/manager/handler"
 	"github.com/peng225/orochi/internal/manager/infra/postgresql"
 	"github.com/peng225/orochi/internal/manager/service"
+	"github.com/peng225/orochi/internal/pkg/psqlutil"
 	"github.com/spf13/cobra"
 )
 
@@ -24,20 +25,19 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		dsRepo := postgresql.NewDatastoreRepository()
-		defer dsRepo.Close()
-		lgRepo := postgresql.NewLocationGroupRepository()
-		defer lgRepo.Close()
-		bucketRepo := postgresql.NewBucketRepository()
-		defer bucketRepo.Close()
-		jobRepo := postgresql.NewJobRepository()
-		defer jobRepo.Close()
+		db := psqlutil.InitDB()
+		defer db.Close()
+		tx := psqlutil.NewTransaction(db)
+		dsRepo := postgresql.NewDatastoreRepository(db)
+		lgRepo := postgresql.NewLocationGroupRepository(db)
+		bucketRepo := postgresql.NewBucketRepository(db)
+		jobRepo := postgresql.NewJobRepository(db)
 
 		dsHandler := handler.NewDatastoreHandler(
-			service.NewDatastoreService(dsRepo, lgRepo),
+			service.NewDatastoreService(tx, dsRepo, lgRepo),
 		)
 		bucketHandler := handler.NewBucketHandler(
-			service.NewBucketService(bucketRepo, jobRepo),
+			service.NewBucketService(tx, bucketRepo, jobRepo),
 		)
 		h := server.Handler(struct {
 			*handler.DatastoreHandler

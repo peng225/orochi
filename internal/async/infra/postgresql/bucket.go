@@ -15,24 +15,22 @@ import (
 )
 
 type BucketRepository struct {
-	db *sql.DB
-	q  *query.Queries
+	q *query.Queries
 }
 
-func NewBucketRepository() *BucketRepository {
-	db := psqlutil.InitDB()
+func NewBucketRepository(db *sql.DB) *BucketRepository {
 	return &BucketRepository{
-		db: db,
-		q:  query.New(db),
+		q: query.New(db),
 	}
 }
 
-func (br *BucketRepository) Close() error {
-	return br.db.Close()
-}
-
 func (br *BucketRepository) GetBucket(ctx context.Context, id int64) (*entity.Bucket, error) {
-	bucket, err := br.q.SelectBucket(ctx, id)
+	tx := psqlutil.TxFromCtx(ctx)
+	q := br.q
+	if tx != nil {
+		q = br.q.WithTx(tx)
+	}
+	bucket, err := q.SelectBucket(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, process.ErrNotFound
@@ -47,7 +45,12 @@ func (br *BucketRepository) GetBucket(ctx context.Context, id int64) (*entity.Bu
 }
 
 func (br *BucketRepository) DeleteBucket(ctx context.Context, id int64) error {
-	err := br.q.DeleteBucket(ctx, id)
+	tx := psqlutil.TxFromCtx(ctx)
+	q := br.q
+	if tx != nil {
+		q = br.q.WithTx(tx)
+	}
+	err := q.DeleteBucket(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete bucket: %w", err)
 	}

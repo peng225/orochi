@@ -15,24 +15,22 @@ import (
 )
 
 type BucketRepository struct {
-	db *sql.DB
-	q  *query.Queries
+	q *query.Queries
 }
 
-func NewBucketRepository() *BucketRepository {
-	db := psqlutil.InitDB()
+func NewBucketRepository(db *sql.DB) *BucketRepository {
 	return &BucketRepository{
-		db: db,
-		q:  query.New(db),
+		q: query.New(db),
 	}
 }
 
-func (br *BucketRepository) Close() error {
-	return br.db.Close()
-}
-
 func (br *BucketRepository) GetBucketByName(ctx context.Context, name string) (*entity.Bucket, error) {
-	b, err := br.q.SelectBucketByName(ctx, name)
+	tx := psqlutil.TxFromCtx(ctx)
+	q := br.q
+	if tx != nil {
+		q = br.q.WithTx(tx)
+	}
+	b, err := q.SelectBucketByName(ctx, name)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, service.ErrNotFound

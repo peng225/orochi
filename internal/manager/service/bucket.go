@@ -16,12 +16,14 @@ var (
 )
 
 type BucketService struct {
+	tx         Transaction
 	bucketRepo BucketRepository
 	jobRepo    JobRepository
 }
 
-func NewBucketService(bucketRepo BucketRepository, jobRepo JobRepository) *BucketService {
+func NewBucketService(tx Transaction, bucketRepo BucketRepository, jobRepo JobRepository) *BucketService {
 	return &BucketService{
+		tx:         tx,
 		bucketRepo: bucketRepo,
 		jobRepo:    jobRepo,
 	}
@@ -49,23 +51,30 @@ func (bs *BucketService) GetBucket(ctx context.Context, id int64) (*entity.Bucke
 }
 
 func (bs *BucketService) DeleteBucket(ctx context.Context, id int64) error {
-	err := bs.bucketRepo.ChangeBucketStatus(ctx, id, "deleted")
-	if err != nil {
-		return fmt.Errorf("failed to change bucket status: %w", err)
-	}
-	param := entity.DeleteAllObjectsInBucketParam{
-		BucketID: id,
-	}
-	data, err := json.Marshal(&param)
-	if err != nil {
-		return fmt.Errorf("failed to marshal json: %w", err)
-	}
-	jobID, err := bs.jobRepo.CreateJob(ctx, &CreateJobRequest{
-		Kind: entity.DeleteAllObjectsInBucket,
-		Data: data,
+	var jobID int64
+	err := bs.tx.Do(ctx, func(ctx context.Context) error {
+		err := bs.bucketRepo.ChangeBucketStatus(ctx, id, "deleted")
+		if err != nil {
+			return fmt.Errorf("failed to change bucket status: %w", err)
+		}
+		param := entity.DeleteAllObjectsInBucketParam{
+			BucketID: id,
+		}
+		data, err := json.Marshal(&param)
+		if err != nil {
+			return fmt.Errorf("failed to marshal json: %w", err)
+		}
+		jobID, err = bs.jobRepo.CreateJob(ctx, &CreateJobRequest{
+			Kind: entity.DeleteAllObjectsInBucket,
+			Data: data,
+		})
+		if err != nil {
+			return fmt.Errorf("failed create job: %w", err)
+		}
+		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("failed create job: %w", err)
+		return fmt.Errorf("transaction failed: %w", err)
 	}
 	slog.Info("Created a job to delete all objects in a bucket.",
 		"bucketID", id, "jobID", jobID)

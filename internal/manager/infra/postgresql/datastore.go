@@ -15,24 +15,22 @@ import (
 )
 
 type DatastoreRepository struct {
-	db *sql.DB
-	q  *query.Queries
+	q *query.Queries
 }
 
-func NewDatastoreRepository() *DatastoreRepository {
-	db := psqlutil.InitDB()
+func NewDatastoreRepository(db *sql.DB) *DatastoreRepository {
 	return &DatastoreRepository{
-		db: db,
-		q:  query.New(db),
+		q: query.New(db),
 	}
 }
 
-func (dr *DatastoreRepository) Close() error {
-	return dr.db.Close()
-}
-
 func (dr *DatastoreRepository) CreateDatastore(ctx context.Context, req *service.CreateDatastoreRequest) (int64, error) {
-	id, err := dr.q.InsertDatastore(ctx, req.BaseURL)
+	tx := psqlutil.TxFromCtx(ctx)
+	q := dr.q
+	if tx != nil {
+		q = dr.q.WithTx(tx)
+	}
+	id, err := q.InsertDatastore(ctx, req.BaseURL)
 	if err != nil {
 		return 0, fmt.Errorf("failed to insert datastore: %w", err)
 	}
@@ -40,7 +38,12 @@ func (dr *DatastoreRepository) CreateDatastore(ctx context.Context, req *service
 }
 
 func (dr *DatastoreRepository) GetDatastore(ctx context.Context, id int64) (*entity.Datastore, error) {
-	ds, err := dr.q.SelectDatastore(ctx, id)
+	tx := psqlutil.TxFromCtx(ctx)
+	q := dr.q
+	if tx != nil {
+		q = dr.q.WithTx(tx)
+	}
+	ds, err := q.SelectDatastore(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, service.ErrNotFound
@@ -54,7 +57,12 @@ func (dr *DatastoreRepository) GetDatastore(ctx context.Context, id int64) (*ent
 }
 
 func (dr *DatastoreRepository) GetDatastoreIDs(ctx context.Context) ([]int64, error) {
-	dsIDs, err := dr.q.SelectDatastoreIDs(ctx)
+	tx := psqlutil.TxFromCtx(ctx)
+	q := dr.q
+	if tx != nil {
+		q = dr.q.WithTx(tx)
+	}
+	dsIDs, err := q.SelectDatastoreIDs(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to select datastore IDs: %w", err)
 	}

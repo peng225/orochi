@@ -13,26 +13,24 @@ import (
 )
 
 type LocationGroupRepository struct {
-	db *sql.DB
-	q  *query.Queries
+	q *query.Queries
 }
 
-func NewLocationGroupRepository() *LocationGroupRepository {
-	db := psqlutil.InitDB()
+func NewLocationGroupRepository(db *sql.DB) *LocationGroupRepository {
 	return &LocationGroupRepository{
-		db: db,
-		q:  query.New(db),
+		q: query.New(db),
 	}
-}
-
-func (lgr *LocationGroupRepository) Close() error {
-	return lgr.db.Close()
 }
 
 func (lgr *LocationGroupRepository) GetLocationGroup(
 	ctx context.Context, id int64,
 ) (*entity.LocationGroup, error) {
-	lg, err := lgr.q.SelectLocationGroup(ctx, id)
+	tx := psqlutil.TxFromCtx(ctx)
+	q := lgr.q
+	if tx != nil {
+		q = lgr.q.WithTx(tx)
+	}
+	lg, err := q.SelectLocationGroup(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, service.ErrNotFound
@@ -47,7 +45,12 @@ func (lgr *LocationGroupRepository) GetLocationGroup(
 }
 
 func (lgr *LocationGroupRepository) GetLocationGroups(ctx context.Context) ([]*entity.LocationGroup, error) {
-	lgs, err := lgr.q.SelectLocationGroups(ctx)
+	tx := psqlutil.TxFromCtx(ctx)
+	q := lgr.q
+	if tx != nil {
+		q = lgr.q.WithTx(tx)
+	}
+	lgs, err := q.SelectLocationGroups(ctx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, service.ErrNotFound

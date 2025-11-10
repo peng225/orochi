@@ -11,6 +11,7 @@ import (
 	"github.com/peng225/orochi/internal/gateway/infra/datastore"
 	"github.com/peng225/orochi/internal/gateway/infra/postgresql"
 	"github.com/peng225/orochi/internal/gateway/service"
+	"github.com/peng225/orochi/internal/pkg/psqlutil"
 	"github.com/spf13/cobra"
 )
 
@@ -40,13 +41,17 @@ to quickly create a Cobra application.`,
 			os.Exit(1)
 		}
 
-		dsRepo := postgresql.NewDatastoreRepository()
-		defer dsRepo.Close()
-		omRepo := postgresql.NewObjectMetadataRepository()
-		bucketRepo := postgresql.NewBucketRepository()
-		lgRepo := postgresql.NewLocationGroupRepository()
-		objService := service.NewObjectStore(nil, datastore.NewClientFactory(), dsRepo,
-			omRepo, bucketRepo, lgRepo)
+		db := psqlutil.InitDB()
+		defer db.Close()
+		tx := psqlutil.NewTransaction(db)
+		dsRepo := postgresql.NewDatastoreRepository(db)
+		omRepo := postgresql.NewObjectMetadataRepository(db)
+		bucketRepo := postgresql.NewBucketRepository(db)
+		lgRepo := postgresql.NewLocationGroupRepository(db)
+		objService := service.NewObjectStore(
+			tx, nil, datastore.NewClientFactory(),
+			dsRepo, omRepo, bucketRepo, lgRepo,
+		)
 		objHandler := handler.NewObjectHandler(objService)
 		h := server.Handler(objHandler)
 		err = http.ListenAndServe(net.JoinHostPort("", port), h)
