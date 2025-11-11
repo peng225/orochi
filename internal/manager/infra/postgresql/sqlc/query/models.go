@@ -53,14 +53,21 @@ func (ns NullBucketStatus) Value() (driver.Value, error) {
 }
 
 type Bucket struct {
-	ID     int64
-	Name   string
-	Status BucketStatus
+	ID         int64
+	Name       string
+	EcConfigID int64
+	Status     BucketStatus
 }
 
 type Datastore struct {
 	ID      int64
 	BaseUrl string
+}
+
+type EcConfig struct {
+	ID        int64
+	NumData   int32
+	NumParity int32
 }
 
 type Job struct {
@@ -73,6 +80,7 @@ type LocationGroup struct {
 	ID                int64
 	CurrentDatastores []int64
 	DesiredDatastores []int64
+	EcConfigID        int64
 }
 
 type ObjectMetadatum struct {

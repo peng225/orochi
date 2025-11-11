@@ -19,7 +19,7 @@ func TestBucket_CreateGetDelete(t *testing.T) {
 	c, err := mgrclient.NewClient(managerBaseURL)
 	require.NoError(t, err)
 	bucketName := "test-bucket"
-	reqBody := fmt.Sprintf(`{"name": "%s"}`, bucketName)
+	reqBody := fmt.Sprintf(`{"name": "%s", "ecConfig": "2D1P"}`, bucketName)
 	createResp, err := c.CreateBucketWithBody(t.Context(), "application/json", strings.NewReader(reqBody))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusCreated, createResp.StatusCode)
@@ -62,7 +62,7 @@ func TestBucket_Create_BadRequest(t *testing.T) {
 	c, err := mgrclient.NewClient(managerBaseURL)
 	require.NoError(t, err)
 	bucketName := "test-bucket//"
-	reqBody := fmt.Sprintf(`{"name": "%s"}`, bucketName)
+	reqBody := fmt.Sprintf(`{"name": "%s", "ecConfig": "2D1P"}`, bucketName)
 	createResp, err := c.CreateBucketWithBody(t.Context(), "application/json", strings.NewReader(reqBody))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusBadRequest, createResp.StatusCode)

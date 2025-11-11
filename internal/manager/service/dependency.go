@@ -22,16 +22,18 @@ type DatastoreRepository interface {
 
 type CreateLocationGroupRequest struct {
 	Datastores []int64
+	ECConfigID int64
 }
 
 type LocationGroupRepository interface {
 	CreateLocationGroup(ctx context.Context, req *CreateLocationGroupRequest) (int64, error)
 	UpdateDesiredDatastores(ctx context.Context, id int64, desiredDatastores []int64) error
-	GetLocationGroups(ctx context.Context) ([]*entity.LocationGroup, error)
+	GetLocationGroupsByECConfigID(ctx context.Context, ecConfigID int64) ([]*entity.LocationGroup, error)
 }
 
 type CreateBucketRequest struct {
-	Name string
+	Name       string
+	ECConfigID int64
 }
 
 type BucketRepository interface {
@@ -47,4 +49,15 @@ type CreateJobRequest struct {
 
 type JobRepository interface {
 	CreateJob(ctx context.Context, req *CreateJobRequest) (int64, error)
+}
+
+type CreateECConfigRequest struct {
+	NumData   int
+	NumParity int
+}
+
+type ECConfigRepository interface {
+	CreateECConfig(ctx context.Context, req *CreateECConfigRequest) (int64, error)
+	GetECConfigByNumbers(ctx context.Context, numData, numParity int) (*entity.ECConfig, error)
+	GetECConfigs(ctx context.Context) ([]*entity.ECConfig, error)
 }

@@ -3,17 +3,28 @@ CREATE TABLE datastore(
     base_url VARCHAR(128) NOT NULL
 );
 
+CREATE TABLE ec_config(
+    id BIGSERIAL PRIMARY KEY,
+    num_data INTEGER NOT NULL,
+    num_parity INTEGER NOT NULL,
+    UNIQUE(num_data, num_parity)
+);
+
 CREATE TABLE location_group(
     id BIGSERIAL PRIMARY KEY,
     current_datastores BIGINT[] NOT NULL,
-    desired_datastores BIGINT[] NOT NULL
+    desired_datastores BIGINT[] NOT NULL,
+    ec_config_id BIGINT NOT NULL,
+    FOREIGN KEY (ec_config_id) REFERENCES ec_config(id)
 );
 
 CREATE TYPE bucket_status AS ENUM ('active', 'deleted');
 CREATE TABLE bucket(
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(128) NOT NULL UNIQUE,
-    status bucket_status NOT NULL
+    ec_config_id BIGINT NOT NULL,
+    status bucket_status NOT NULL,
+    FOREIGN KEY (ec_config_id) REFERENCES ec_config(id)
 );
 
 CREATE TABLE object_metadata(

@@ -30,14 +30,19 @@ func (q *Queries) DeleteJob(ctx context.Context, id int64) error {
 }
 
 const selectBucket = `-- name: SelectBucket :one
-SELECT id, name, status FROM bucket
+SELECT id, name, ec_config_id, status FROM bucket
 WHERE id = $1
 `
 
 func (q *Queries) SelectBucket(ctx context.Context, id int64) (Bucket, error) {
 	row := q.db.QueryRowContext(ctx, selectBucket, id)
 	var i Bucket
-	err := row.Scan(&i.ID, &i.Name, &i.Status)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.EcConfigID,
+		&i.Status,
+	)
 	return i, err
 }
 

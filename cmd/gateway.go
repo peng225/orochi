@@ -48,9 +48,10 @@ to quickly create a Cobra application.`,
 		omRepo := postgresql.NewObjectMetadataRepository(db)
 		bucketRepo := postgresql.NewBucketRepository(db)
 		lgRepo := postgresql.NewLocationGroupRepository(db)
+		eccRepo := postgresql.NewECConfigRepository(db)
 		objService := service.NewObjectStore(
 			tx, nil, datastore.NewClientFactory(),
-			dsRepo, omRepo, bucketRepo, lgRepo,
+			dsRepo, omRepo, bucketRepo, lgRepo, eccRepo,
 		)
 		objHandler := handler.NewObjectHandler(objService)
 		h := server.Handler(objHandler)

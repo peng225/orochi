@@ -3,7 +3,6 @@ package postgresql
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 
 	"github.com/peng225/orochi/internal/entity"
@@ -34,6 +33,7 @@ func (lgr *LocationGroupRepository) CreateLocationGroup(
 	id, err := q.InsertLocationGroup(ctx, query.InsertLocationGroupParams{
 		CurrentDatastores: req.Datastores,
 		DesiredDatastores: req.Datastores,
+		EcConfigID:        req.ECConfigID,
 	})
 	if err != nil {
 		return 0, fmt.Errorf("failed to insert location group: %w", err)
@@ -61,17 +61,17 @@ func (lgr *LocationGroupRepository) UpdateDesiredDatastores(
 	return nil
 }
 
-func (lgr *LocationGroupRepository) GetLocationGroups(ctx context.Context) ([]*entity.LocationGroup, error) {
+// FIXME: should limit the result number. It can be very large.
+func (lgr *LocationGroupRepository) GetLocationGroupsByECConfigID(
+	ctx context.Context, ecConfigID int64,
+) ([]*entity.LocationGroup, error) {
 	tx := psqlutil.TxFromCtx(ctx)
 	q := lgr.q
 	if tx != nil {
 		q = lgr.q.WithTx(tx)
 	}
-	lgs, err := q.SelectLocationGroups(ctx)
+	lgs, err := q.SelectLocationGroupsByECConfigID(ctx, ecConfigID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, service.ErrNotFound
-		}
 		return nil, fmt.Errorf("failed to select location group: %w", err)
 	}
 	ret := make([]*entity.LocationGroup, 0, len(lgs))
@@ -80,6 +80,7 @@ func (lgr *LocationGroupRepository) GetLocationGroups(ctx context.Context) ([]*e
 			ID:                lg.ID,
 			CurrentDatastores: lg.CurrentDatastores,
 			DesiredDatastores: lg.DesiredDatastores,
+			ECConfigID:        lg.EcConfigID,
 		})
 	}
 	return ret, nil
