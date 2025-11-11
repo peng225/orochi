@@ -98,6 +98,8 @@ func (lgs *LocationGroupService) expandLocationGroup(
 ) error {
 	i := 0
 	for _, lg := range locationGroups {
+		// FIXME: should move the actual object asynchronously
+		// according to the new desired datastores.
 		err := lgs.lgRepo.UpdateDesiredDatastores(ctx, lg.ID, newDesiredDSs[i])
 		if err != nil {
 			return err

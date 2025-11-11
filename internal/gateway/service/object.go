@@ -121,6 +121,10 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucket string
 		if err != nil {
 			return fmt.Errorf("failed to encode: %w", err)
 		}
+		if len(codes) != len(lg.CurrentDatastores) {
+			return fmt.Errorf("unexpected code length: expected=%d, actual=%d",
+				len(lg.CurrentDatastores), len(codes))
+		}
 		// FIXME: parallelize.
 		for i, ds := range lg.CurrentDatastores {
 			err = osvc.chunkRepos[ds].CreateObject(ctx, filepath.Join(bucket, name), bytes.NewBuffer(codes[i]))

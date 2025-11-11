@@ -65,6 +65,16 @@ services:
       - 8084:8084
     volumes:
       - ./data/datastore2:/data
+  datastore3:
+    image: ghcr.io/peng225/orochi:latest
+    container_name: datastore3
+    command: ["datastore", "-p", "8085", "--log-level", "debug"]
+    networks:
+      - testnet
+    ports:
+      - 8085:8085
+    volumes:
+      - ./data/datastore3:/data
   gateway:
     image: ghcr.io/peng225/orochi:latest
     container_name: gateway

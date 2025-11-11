@@ -20,14 +20,14 @@ const (
 	managerBaseURL = "http://localhost:8080"
 )
 
-func prepareBucket(t *testing.T) string {
+func prepareBucket(t *testing.T, ecConfigStr string) string {
 	t.Helper()
 
 	c, err := mgrclient.NewClient(managerBaseURL)
 	require.NoError(t, err)
 
-	bucketName := fmt.Sprintf("test-bucket-%s", generateRandomStr(t, 8))
-	data := fmt.Sprintf(`{"name": "%s", "ecConfig": "2D1P"}`, bucketName)
+	bucketName := fmt.Sprintf("test-bucket-%s-%s", ecConfigStr, generateRandomStr(t, 8))
+	data := fmt.Sprintf(`{"name": "%s", "ecConfig": "%s"}`, bucketName, ecConfigStr)
 	resp, err := c.CreateBucketWithBody(t.Context(), "application/json", strings.NewReader(data))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusCreated, resp.StatusCode)
