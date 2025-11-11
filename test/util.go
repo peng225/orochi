@@ -27,7 +27,7 @@ func prepareBucket(t *testing.T) string {
 	require.NoError(t, err)
 
 	bucketName := fmt.Sprintf("test-bucket-%s", generateRandomStr(t, 8))
-	data := fmt.Sprintf(`{"name": "%s"}`, bucketName)
+	data := fmt.Sprintf(`{"name": "%s", "ecConfig": "2D1P"}`, bucketName)
 	resp, err := c.CreateBucketWithBody(t.Context(), "application/json", strings.NewReader(data))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusCreated, resp.StatusCode)

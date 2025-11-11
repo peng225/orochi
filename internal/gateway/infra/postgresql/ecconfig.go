@@ -14,33 +14,32 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type BucketRepository struct {
+type ECConfigRepository struct {
 	q *query.Queries
 }
 
-func NewBucketRepository(db *sql.DB) *BucketRepository {
-	return &BucketRepository{
+func NewECConfigRepository(db *sql.DB) *ECConfigRepository {
+	return &ECConfigRepository{
 		q: query.New(db),
 	}
 }
 
-func (br *BucketRepository) GetBucketByName(ctx context.Context, name string) (*entity.Bucket, error) {
+func (ecr *ECConfigRepository) GetECConfig(ctx context.Context, id int64) (*entity.ECConfig, error) {
 	tx := psqlutil.TxFromCtx(ctx)
-	q := br.q
+	q := ecr.q
 	if tx != nil {
-		q = br.q.WithTx(tx)
+		q = ecr.q.WithTx(tx)
 	}
-	b, err := q.SelectBucketByName(ctx, name)
+	ecc, err := q.SelectECConfig(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, service.ErrNotFound
 		}
-		return nil, fmt.Errorf("failed to select bucket: %w", err)
+		return nil, fmt.Errorf("failed to select EC config: %w", err)
 	}
-	return &entity.Bucket{
-		ID:         b.ID,
-		Name:       b.Name,
-		ECConfigID: b.EcConfigID,
-		Status:     string(b.Status),
+	return &entity.ECConfig{
+		ID:        ecc.ID,
+		NumData:   int(ecc.NumData),
+		NumParity: int(ecc.NumParity),
 	}, nil
 }

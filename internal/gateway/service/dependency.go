@@ -54,5 +54,9 @@ type BucketRepository interface {
 
 type LocationGroupRepository interface {
 	GetLocationGroup(ctx context.Context, id int64) (*entity.LocationGroup, error)
-	GetLocationGroups(ctx context.Context) ([]*entity.LocationGroup, error)
+	GetLocationGroupsByECConfigID(ctx context.Context, ecConfigID int64) ([]*entity.LocationGroup, error)
+}
+
+type ECConfigRepository interface {
+	GetECConfig(ctx context.Context, id int64) (*entity.ECConfig, error)
 }

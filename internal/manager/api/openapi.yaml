@@ -110,6 +110,9 @@ components:
         name:
           type: string
           example: test-bucket
+        ecConfig:
+          type: string
+          example: 2D1P
   parameters:
     datastoreID:
       name: id

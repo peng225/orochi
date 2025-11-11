@@ -46,14 +46,19 @@ func (q *Queries) DeleteObjectMetadata(ctx context.Context, id int64) error {
 }
 
 const selectBucketByName = `-- name: SelectBucketByName :one
-SELECT id, name, status FROM bucket
+SELECT id, name, ec_config_id, status FROM bucket
 WHERE name = $1
 `
 
 func (q *Queries) SelectBucketByName(ctx context.Context, name string) (Bucket, error) {
 	row := q.db.QueryRowContext(ctx, selectBucketByName, name)
 	var i Bucket
-	err := row.Scan(&i.ID, &i.Name, &i.Status)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.EcConfigID,
+		&i.Status,
+	)
 	return i, err
 }
 
@@ -84,24 +89,42 @@ func (q *Queries) SelectDatastores(ctx context.Context) ([]Datastore, error) {
 	return items, nil
 }
 
+const selectECConfig = `-- name: SelectECConfig :one
+SELECT id, num_data, num_parity FROM ec_config
+WHERE id = $1
+`
+
+func (q *Queries) SelectECConfig(ctx context.Context, id int64) (EcConfig, error) {
+	row := q.db.QueryRowContext(ctx, selectECConfig, id)
+	var i EcConfig
+	err := row.Scan(&i.ID, &i.NumData, &i.NumParity)
+	return i, err
+}
+
 const selectLocationGroup = `-- name: SelectLocationGroup :one
-SELECT id, current_datastores, desired_datastores from location_group
+SELECT id, current_datastores, desired_datastores, ec_config_id from location_group
 WHERE id = $1
 `
 
 func (q *Queries) SelectLocationGroup(ctx context.Context, id int64) (LocationGroup, error) {
 	row := q.db.QueryRowContext(ctx, selectLocationGroup, id)
 	var i LocationGroup
-	err := row.Scan(&i.ID, pq.Array(&i.CurrentDatastores), pq.Array(&i.DesiredDatastores))
+	err := row.Scan(
+		&i.ID,
+		pq.Array(&i.CurrentDatastores),
+		pq.Array(&i.DesiredDatastores),
+		&i.EcConfigID,
+	)
 	return i, err
 }
 
-const selectLocationGroups = `-- name: SelectLocationGroups :many
-SELECT id, current_datastores, desired_datastores from location_group
+const selectLocationGroupsByECConfigID = `-- name: SelectLocationGroupsByECConfigID :many
+SELECT id, current_datastores, desired_datastores, ec_config_id from location_group
+WHERE ec_config_id = $1
 `
 
-func (q *Queries) SelectLocationGroups(ctx context.Context) ([]LocationGroup, error) {
-	rows, err := q.db.QueryContext(ctx, selectLocationGroups)
+func (q *Queries) SelectLocationGroupsByECConfigID(ctx context.Context, ecConfigID int64) ([]LocationGroup, error) {
+	rows, err := q.db.QueryContext(ctx, selectLocationGroupsByECConfigID, ecConfigID)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +132,12 @@ func (q *Queries) SelectLocationGroups(ctx context.Context) ([]LocationGroup, er
 	var items []LocationGroup
 	for rows.Next() {
 		var i LocationGroup
-		if err := rows.Scan(&i.ID, pq.Array(&i.CurrentDatastores), pq.Array(&i.DesiredDatastores)); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			pq.Array(&i.CurrentDatastores),
+			pq.Array(&i.DesiredDatastores),
+			&i.EcConfigID,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

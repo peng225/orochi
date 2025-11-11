@@ -32,12 +32,14 @@ to quickly create a Cobra application.`,
 		lgRepo := postgresql.NewLocationGroupRepository(db)
 		bucketRepo := postgresql.NewBucketRepository(db)
 		jobRepo := postgresql.NewJobRepository(db)
+		eccRepo := postgresql.NewECConfigRepository(db)
+		lgService := service.NewLocationGroupService(tx, dsRepo, lgRepo, eccRepo)
 
 		dsHandler := handler.NewDatastoreHandler(
-			service.NewDatastoreService(tx, dsRepo, lgRepo),
+			service.NewDatastoreService(tx, lgService, dsRepo),
 		)
 		bucketHandler := handler.NewBucketHandler(
-			service.NewBucketService(tx, bucketRepo, jobRepo),
+			service.NewBucketService(tx, lgService, bucketRepo, jobRepo, eccRepo),
 		)
 		h := server.Handler(struct {
 			*handler.DatastoreHandler

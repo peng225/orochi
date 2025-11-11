@@ -14,15 +14,20 @@ import (
 
 const insertBucket = `-- name: InsertBucket :one
 INSERT INTO bucket (
-   name, status
+   name, ec_config_id, status
 ) VALUES (
-  $1, 'active'
+  $1, $2, 'active'
 )
 RETURNING id
 `
 
-func (q *Queries) InsertBucket(ctx context.Context, name string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, insertBucket, name)
+type InsertBucketParams struct {
+	Name       string
+	EcConfigID int64
+}
+
+func (q *Queries) InsertBucket(ctx context.Context, arg InsertBucketParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, insertBucket, arg.Name, arg.EcConfigID)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -39,6 +44,28 @@ RETURNING id
 
 func (q *Queries) InsertDatastore(ctx context.Context, baseUrl string) (int64, error) {
 	row := q.db.QueryRowContext(ctx, insertDatastore, baseUrl)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const insertECConfig = `-- name: InsertECConfig :one
+INSERT INTO ec_config (
+   num_data,
+   num_parity
+) VALUES (
+  $1, $2
+)
+RETURNING id
+`
+
+type InsertECConfigParams struct {
+	NumData   int32
+	NumParity int32
+}
+
+func (q *Queries) InsertECConfig(ctx context.Context, arg InsertECConfigParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, insertECConfig, arg.NumData, arg.NumParity)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -68,9 +95,10 @@ func (q *Queries) InsertJob(ctx context.Context, arg InsertJobParams) (int64, er
 const insertLocationGroup = `-- name: InsertLocationGroup :one
 INSERT INTO location_group (
    current_datastores,
-   desired_datastores
+   desired_datastores,
+   ec_config_id
 ) VALUES (
-  $1, $2
+  $1, $2, $3
 )
 RETURNING id
 `
@@ -78,24 +106,30 @@ RETURNING id
 type InsertLocationGroupParams struct {
 	CurrentDatastores []int64
 	DesiredDatastores []int64
+	EcConfigID        int64
 }
 
 func (q *Queries) InsertLocationGroup(ctx context.Context, arg InsertLocationGroupParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, insertLocationGroup, pq.Array(arg.CurrentDatastores), pq.Array(arg.DesiredDatastores))
+	row := q.db.QueryRowContext(ctx, insertLocationGroup, pq.Array(arg.CurrentDatastores), pq.Array(arg.DesiredDatastores), arg.EcConfigID)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
 }
 
 const selectBucket = `-- name: SelectBucket :one
-SELECT id, name, status FROM bucket
+SELECT id, name, ec_config_id, status FROM bucket
 WHERE id = $1
 `
 
 func (q *Queries) SelectBucket(ctx context.Context, id int64) (Bucket, error) {
 	row := q.db.QueryRowContext(ctx, selectBucket, id)
 	var i Bucket
-	err := row.Scan(&i.ID, &i.Name, &i.Status)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.EcConfigID,
+		&i.Status,
+	)
 	return i, err
 }
 
@@ -138,12 +172,57 @@ func (q *Queries) SelectDatastoreIDs(ctx context.Context) ([]int64, error) {
 	return items, nil
 }
 
-const selectLocationGroups = `-- name: SelectLocationGroups :many
-SELECT id, current_datastores, desired_datastores from location_group
+const selectECConfigByNumbers = `-- name: SelectECConfigByNumbers :one
+SELECT id, num_data, num_parity FROM ec_config
+WHERE num_data = $1 AND num_parity = $2
 `
 
-func (q *Queries) SelectLocationGroups(ctx context.Context) ([]LocationGroup, error) {
-	rows, err := q.db.QueryContext(ctx, selectLocationGroups)
+type SelectECConfigByNumbersParams struct {
+	NumData   int32
+	NumParity int32
+}
+
+func (q *Queries) SelectECConfigByNumbers(ctx context.Context, arg SelectECConfigByNumbersParams) (EcConfig, error) {
+	row := q.db.QueryRowContext(ctx, selectECConfigByNumbers, arg.NumData, arg.NumParity)
+	var i EcConfig
+	err := row.Scan(&i.ID, &i.NumData, &i.NumParity)
+	return i, err
+}
+
+const selectECConfigs = `-- name: SelectECConfigs :many
+SELECT id, num_data, num_parity from ec_config
+`
+
+func (q *Queries) SelectECConfigs(ctx context.Context) ([]EcConfig, error) {
+	rows, err := q.db.QueryContext(ctx, selectECConfigs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EcConfig
+	for rows.Next() {
+		var i EcConfig
+		if err := rows.Scan(&i.ID, &i.NumData, &i.NumParity); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const selectLocationGroupsByECConfigID = `-- name: SelectLocationGroupsByECConfigID :many
+SELECT id, current_datastores, desired_datastores, ec_config_id from location_group
+WHERE ec_config_id = $1
+`
+
+func (q *Queries) SelectLocationGroupsByECConfigID(ctx context.Context, ecConfigID int64) ([]LocationGroup, error) {
+	rows, err := q.db.QueryContext(ctx, selectLocationGroupsByECConfigID, ecConfigID)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +230,12 @@ func (q *Queries) SelectLocationGroups(ctx context.Context) ([]LocationGroup, er
 	var items []LocationGroup
 	for rows.Next() {
 		var i LocationGroup
-		if err := rows.Scan(&i.ID, pq.Array(&i.CurrentDatastores), pq.Array(&i.DesiredDatastores)); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			pq.Array(&i.CurrentDatastores),
+			pq.Array(&i.DesiredDatastores),
+			&i.EcConfigID,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

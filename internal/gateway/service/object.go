@@ -34,6 +34,7 @@ type ObjectService struct {
 	omRepo     ObjectMetadataRepository
 	bucketRepo BucketRepository
 	lgRepo     LocationGroupRepository
+	eccRepo    ECConfigRepository
 }
 
 func NewObjectStore(
@@ -44,6 +45,7 @@ func NewObjectStore(
 	omRepo ObjectMetadataRepository,
 	bucketRepo BucketRepository,
 	lgRepo LocationGroupRepository,
+	eccRepo ECConfigRepository,
 ) *ObjectService {
 	if chunkRepos == nil {
 		chunkRepos = make(map[int64]ChunkRepository)
@@ -56,6 +58,7 @@ func NewObjectStore(
 		omRepo:     omRepo,
 		bucketRepo: bucketRepo,
 		lgRepo:     lgRepo,
+		eccRepo:    eccRepo,
 	}
 }
 
@@ -108,8 +111,12 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucket string
 		if err != nil {
 			return fmt.Errorf("failed to read data: %w", err)
 		}
-		// Should remove the assumption of 2D1P.
-		m := ec.NewManager(2, 1, minECChunkSizeInByte)
+
+		ecConfig, err := osvc.eccRepo.GetECConfig(ctx, lg.ECConfigID)
+		if err != nil {
+			return fmt.Errorf("failed to get EC config: %w", err)
+		}
+		m := ec.NewManager(ecConfig.NumData, ecConfig.NumParity, minECChunkSizeInByte)
 		codes, err := m.Encode(data)
 		if err != nil {
 			return fmt.Errorf("failed to encode: %w", err)
@@ -136,6 +143,7 @@ func (osvc *ObjectService) GetObject(ctx context.Context, name, bucket string) (
 	}
 
 	var lg *entity.LocationGroup
+	var ecConfig *entity.ECConfig
 	err := osvc.tx.Do(ctx, func(ctx context.Context) error {
 		om, err := osvc.getObjectMetadataByName(ctx, name, bucket)
 		if err != nil {
@@ -145,6 +153,10 @@ func (osvc *ObjectService) GetObject(ctx context.Context, name, bucket string) (
 		if err != nil {
 			return fmt.Errorf("failed to get location group: %w", err)
 		}
+		ecConfig, err = osvc.eccRepo.GetECConfig(ctx, lg.ECConfigID)
+		if err != nil {
+			return fmt.Errorf("failed to get EC config: %w", err)
+		}
 		return nil
 	})
 	if err != nil {
@@ -152,12 +164,9 @@ func (osvc *ObjectService) GetObject(ctx context.Context, name, bucket string) (
 	}
 
 	eg := new(errgroup.Group)
-	// FIXME: remove the 2D1P assumption.
 	// FIXME: should decode even if some datastores are down.
-	codes := make([][]byte, 3)
-	for i, ds := range lg.CurrentDatastores[:2] {
-		i := i
-		ds := ds
+	codes := make([][]byte, ecConfig.NumData+ecConfig.NumParity)
+	for i, ds := range lg.CurrentDatastores[:ecConfig.NumData] {
 		eg.Go(func() error {
 			rc, err := osvc.chunkRepos[ds].GetObject(ctx, filepath.Join(bucket, name))
 			if err != nil {
@@ -176,7 +185,7 @@ func (osvc *ObjectService) GetObject(ctx context.Context, name, bucket string) (
 		return nil, fmt.Errorf("failed to get object chunk: %w", err)
 	}
 
-	m := ec.NewManager(2, 1, minECChunkSizeInByte)
+	m := ec.NewManager(ecConfig.NumData, ecConfig.NumParity, minECChunkSizeInByte)
 	data, err := m.Decode(codes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode: %w", err)
@@ -193,7 +202,7 @@ func (osvc *ObjectService) createObjectMetadata(
 	if err != nil {
 		return 0, fmt.Errorf("failed to get bucket by name: %w", err)
 	}
-	lgs, err := osvc.lgRepo.GetLocationGroups(ctx)
+	lgs, err := osvc.lgRepo.GetLocationGroupsByECConfigID(ctx, bucket.ECConfigID)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get location groups: %w", err)
 	}

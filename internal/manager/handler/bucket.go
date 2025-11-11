@@ -28,14 +28,27 @@ func (bh *BucketHandler) CreateBucket(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Error("Failed to read body.", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 	var req server.CreateBucketRequest
 	err = json.Unmarshal(data, &req)
 	if err != nil {
 		slog.Error("Failed to unmarshal body.", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
-	id, err := bh.bs.CreateBucket(r.Context(), *req.Name)
+	if req.Name == nil {
+		slog.Error("Name is not set.")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if req.EcConfig == nil {
+		slog.Error("EC config is not set.")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	id, err := bh.bs.CreateBucket(r.Context(), *req.Name, *req.EcConfig)
 	if err != nil {
 		slog.Error("Failed to create bucket.", "err", err)
 		switch {

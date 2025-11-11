@@ -18,7 +18,8 @@ import (
 
 // CreateBucketRequest defines model for createBucketRequest.
 type CreateBucketRequest struct {
-	Name *string `json:"name,omitempty"`
+	EcConfig *string `json:"ecConfig,omitempty"`
+	Name     *string `json:"name,omitempty"`
 }
 
 // CreateDatastoreRequest defines model for createDatastoreRequest.
