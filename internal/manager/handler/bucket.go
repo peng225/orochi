@@ -28,12 +28,14 @@ func (bh *BucketHandler) CreateBucket(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Error("Failed to read body.", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 	var req server.CreateBucketRequest
 	err = json.Unmarshal(data, &req)
 	if err != nil {
 		slog.Error("Failed to unmarshal body.", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 	id, err := bh.bs.CreateBucket(r.Context(), *req.Name)
 	if err != nil {
