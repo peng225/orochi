@@ -73,8 +73,8 @@ func (osvc *ObjectService) Refresh(ctx context.Context) error {
 	return nil
 }
 
-func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucket string, r io.Reader) error {
-	slog.Debug("ObjectService::CreateObject called.", "name", name, "bucket", bucket)
+func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucketName string, r io.Reader) error {
+	slog.Debug("ObjectService::CreateObject called.", "name", name, "bucketName", bucketName)
 	if !validObjectName.MatchString(name) {
 		return errors.Join(fmt.Errorf("invalid object name: %s", name), ErrInvalidParameter)
 	}
@@ -85,7 +85,17 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucket string
 	}
 
 	err = osvc.tx.Do(ctx, func(ctx context.Context) error {
-		om, err := osvc.getObjectMetadataByName(ctx, name, bucket)
+		bucket, err := osvc.bucketRepo.GetBucketByName(ctx, bucketName)
+		if err != nil {
+			if errors.Is(err, ErrNotFound) {
+				return errors.Join(fmt.Errorf("bucket not found"), ErrInvalidParameter)
+			}
+			return fmt.Errorf("failed to get bucket by name: %w", err)
+		}
+		if bucket.Status != "active" {
+			return fmt.Errorf("unexpected bucket status: %s", bucket.Status)
+		}
+		om, err := osvc.omRepo.GetObjectMetadataByName(ctx, name, bucket.ID)
 		if err != nil {
 			if !errors.Is(err, ErrNotFound) {
 				return fmt.Errorf("failed to get object metadata by name: %w", err)
@@ -94,7 +104,7 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucket string
 			if err != nil {
 				return fmt.Errorf("failed to create object metadata: %w", err)
 			}
-			om, err = osvc.getObjectMetadataByName(ctx, name, bucket)
+			om, err = osvc.omRepo.GetObjectMetadataByName(ctx, name, bucket.ID)
 			if err != nil {
 				return fmt.Errorf("failed to get object metadata: %w", err)
 			}
@@ -127,7 +137,7 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucket string
 		}
 		// FIXME: parallelize.
 		for i, ds := range lg.CurrentDatastores {
-			err = osvc.chunkRepos[ds].CreateObject(ctx, filepath.Join(bucket, name), bytes.NewBuffer(codes[i]))
+			err = osvc.chunkRepos[ds].CreateObject(ctx, filepath.Join(bucketName, name), bytes.NewBuffer(codes[i]))
 			if err != nil {
 				return fmt.Errorf("CreateObject failed: %w", err)
 			}
@@ -140,8 +150,8 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucket string
 	return nil
 }
 
-func (osvc *ObjectService) GetObject(ctx context.Context, name, bucket string) ([]byte, error) {
-	slog.Debug("ObjectService::GetObject called.", "name", name, "bucket", bucket)
+func (osvc *ObjectService) GetObject(ctx context.Context, name, bucketName string) ([]byte, error) {
+	slog.Debug("ObjectService::GetObject called.", "name", name, "bucketName", bucketName)
 	if !validObjectName.MatchString(name) {
 		return nil, errors.Join(fmt.Errorf("invalid object name: %s", name), ErrInvalidParameter)
 	}
@@ -149,7 +159,14 @@ func (osvc *ObjectService) GetObject(ctx context.Context, name, bucket string) (
 	var lg *entity.LocationGroup
 	var ecConfig *entity.ECConfig
 	err := osvc.tx.Do(ctx, func(ctx context.Context) error {
-		om, err := osvc.getObjectMetadataByName(ctx, name, bucket)
+		bucket, err := osvc.bucketRepo.GetBucketByName(ctx, bucketName)
+		if err != nil {
+			if errors.Is(err, ErrNotFound) {
+				return errors.Join(fmt.Errorf("bucket not found"), ErrInvalidParameter)
+			}
+			return fmt.Errorf("failed to get bucket by name: %w", err)
+		}
+		om, err := osvc.omRepo.GetObjectMetadataByName(ctx, name, bucket.ID)
 		if err != nil {
 			return fmt.Errorf("failed to get object metadata: %w", err)
 		}
@@ -172,7 +189,7 @@ func (osvc *ObjectService) GetObject(ctx context.Context, name, bucket string) (
 	codes := make([][]byte, ecConfig.NumData+ecConfig.NumParity)
 	for i, ds := range lg.CurrentDatastores[:ecConfig.NumData] {
 		eg.Go(func() error {
-			rc, err := osvc.chunkRepos[ds].GetObject(ctx, filepath.Join(bucket, name))
+			rc, err := osvc.chunkRepos[ds].GetObject(ctx, filepath.Join(bucketName, name))
 			if err != nil {
 				return fmt.Errorf("GetObject failed: %w", err)
 			}
@@ -200,12 +217,8 @@ func (osvc *ObjectService) GetObject(ctx context.Context, name, bucket string) (
 func (osvc *ObjectService) createObjectMetadata(
 	ctx context.Context,
 	name string,
-	bucketName string,
+	bucket *entity.Bucket,
 ) (int64, error) {
-	bucket, err := osvc.bucketRepo.GetBucketByName(ctx, bucketName)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get bucket by name: %w", err)
-	}
 	lgs, err := osvc.lgRepo.GetLocationGroupsByECConfigID(ctx, bucket.ECConfigID)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get location groups: %w", err)
@@ -227,33 +240,21 @@ func (osvc *ObjectService) createObjectMetadata(
 	return id, nil
 }
 
-func (osvc *ObjectService) getObjectMetadataByName(
-	ctx context.Context,
-	name, bucketName string,
-) (*entity.ObjectMetadata, error) {
-	bucket, err := osvc.bucketRepo.GetBucketByName(ctx, bucketName)
-	if err != nil {
-		if errors.Is(err, ErrNotFound) {
-			return nil, ErrInvalidParameter
-		}
-		return nil, fmt.Errorf("failed to get bucket by name: %w", err)
-	}
-
-	om, err := osvc.omRepo.GetObjectMetadataByName(ctx, name, bucket.ID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get object metadata by name: %w", err)
-	}
-	return om, nil
-}
-
-func (osvc *ObjectService) DeleteObject(ctx context.Context, name, bucket string, r io.Reader) error {
-	slog.Debug("ObjectService::DeleteObject called.", "name", name, "bucket", bucket)
+func (osvc *ObjectService) DeleteObject(ctx context.Context, name, bucketName string, r io.Reader) error {
+	slog.Debug("ObjectService::DeleteObject called.", "name", name, "bucketName", bucketName)
 	if !validObjectName.MatchString(name) {
 		return errors.Join(fmt.Errorf("invalid object name: %s", name), ErrInvalidParameter)
 	}
 
 	err := osvc.tx.Do(ctx, func(ctx context.Context) error {
-		om, err := osvc.getObjectMetadataByName(ctx, name, bucket)
+		bucket, err := osvc.bucketRepo.GetBucketByName(ctx, bucketName)
+		if err != nil {
+			if errors.Is(err, ErrNotFound) {
+				return errors.Join(fmt.Errorf("bucket not found"), ErrInvalidParameter)
+			}
+			return fmt.Errorf("failed to get bucket by name: %w", err)
+		}
+		om, err := osvc.omRepo.GetObjectMetadataByName(ctx, name, bucket.ID)
 		if err != nil {
 			if errors.Is(err, ErrNotFound) {
 				return nil
@@ -269,7 +270,7 @@ func (osvc *ObjectService) DeleteObject(ctx context.Context, name, bucket string
 			return fmt.Errorf("unsupported behavior")
 		}
 		for _, ds := range lg.CurrentDatastores {
-			err = osvc.chunkRepos[ds].DeleteObject(ctx, filepath.Join(bucket, name))
+			err = osvc.chunkRepos[ds].DeleteObject(ctx, filepath.Join(bucketName, name))
 			if err != nil {
 				return fmt.Errorf("DeleteObject failed: %w", err)
 			}
@@ -287,15 +288,15 @@ func (osvc *ObjectService) DeleteObject(ctx context.Context, name, bucket string
 }
 
 func (osvc *ObjectService) ListObjects(
-	ctx context.Context, bucket string,
+	ctx context.Context, bucketName string,
 	startFrom int64, limit int,
 ) ([]string, int64, error) {
 	slog.Debug("ObjectService::ListObjects called.",
-		"bucket", bucket, "startFrom", startFrom, "limit", limit)
+		"bucketName", bucketName, "startFrom", startFrom, "limit", limit)
 	if limit > 1000 {
 		return nil, 0, fmt.Errorf("limit must not larger than 1000: %w", ErrInvalidParameter)
 	}
-	b, err := osvc.bucketRepo.GetBucketByName(ctx, bucket)
+	b, err := osvc.bucketRepo.GetBucketByName(ctx, bucketName)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return nil, 0, ErrInvalidParameter
