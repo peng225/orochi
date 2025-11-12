@@ -102,7 +102,20 @@ func (lgs *LocationGroupService) expandLocationGroup(
 	ecConfigID int64,
 ) error {
 	i := 0
-	for _, lg := range locationGroups {
+	// Avoid to update location groups that already have
+	// one of the new desired datastores.
+	for j := range len(locationGroups) {
+		for k := range newDesiredDSs[i:] {
+			if slices.Equal(locationGroups[j].DesiredDatastores, newDesiredDSs[k]) {
+				locationGroups[i], locationGroups[j] = locationGroups[j], locationGroups[i]
+				newDesiredDSs[i], newDesiredDSs[k] = newDesiredDSs[k], newDesiredDSs[i]
+				i++
+				break
+			}
+		}
+	}
+
+	for _, lg := range locationGroups[i:] {
 		// FIXME: should move the actual object asynchronously
 		// according to the new desired datastores.
 		err := lgs.lgRepo.UpdateDesiredDatastores(ctx, lg.ID, newDesiredDSs[i])
@@ -144,6 +157,8 @@ func generateNewDesiredDSs(dsIDs []int64, stripeWidth, targetNum int) [][]int64 
 	return result
 }
 
+// FIXME: should resolve the unbalance allocations among datastores.
+// Shuffling dsIDs before iteration may resolve the issue.
 func generateNewDesiredDSsHelper(dsIDs []int64, stripeWidth, targetNum int, current []int64, result *[][]int64) {
 	if len(*result) == targetNum {
 		return
