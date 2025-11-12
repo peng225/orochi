@@ -61,20 +61,25 @@ func (lgs *LocationGroupService) ReconstructLocationGroups(ctx context.Context, 
 		return nil
 	}
 	perm := permutation(len(dsIDs), stripeWidth, targetLGNumPerDatastore)
-	targetNum := min(perm, targetLGNumPerDatastore)
+	targetNumPerDatastore := min(perm/len(dsIDs), targetLGNumPerDatastore)
 	currentLGNumPerDatastore := len(locationGroups) / len(dsIDs)
-	if targetNum/2 <= currentLGNumPerDatastore &&
-		currentLGNumPerDatastore <= targetNum*3/2 {
+	if targetNumPerDatastore/2 <= currentLGNumPerDatastore &&
+		currentLGNumPerDatastore <= targetNumPerDatastore*3/2 {
 		// Don't need to reconstruct location groups.
 		return nil
 	}
-	if targetNum < len(locationGroups) {
+	slog.Info("Location group update required.",
+		"len(dsIDs)", len(dsIDs),
+		"stripeWidth", stripeWidth,
+		"targetNumPerDatastore", targetNumPerDatastore,
+		"currentLGNumPerDatastore", currentLGNumPerDatastore)
+	if targetNumPerDatastore < currentLGNumPerDatastore {
 		err := lgs.shrinkLocationGroup()
 		if err != nil {
 			return fmt.Errorf("failed to shrink location group: %w", err)
 		}
 	} else {
-		newDesiredDatastores := generateNewDesiredDSs(dsIDs, stripeWidth, targetNum)
+		newDesiredDatastores := generateNewDesiredDSs(dsIDs, stripeWidth, targetNumPerDatastore*len(dsIDs))
 		// FIXME: should I create a location group for EC configs that have the same stripe width,
 		//        not per EC config?
 		err := lgs.expandLocationGroup(ctx, locationGroups, newDesiredDatastores, ecConfig.ID)
@@ -98,6 +103,8 @@ func (lgs *LocationGroupService) expandLocationGroup(
 ) error {
 	i := 0
 	for _, lg := range locationGroups {
+		// FIXME: should move the actual object asynchronously
+		// according to the new desired datastores.
 		err := lgs.lgRepo.UpdateDesiredDatastores(ctx, lg.ID, newDesiredDSs[i])
 		if err != nil {
 			return err

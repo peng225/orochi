@@ -12,6 +12,7 @@ import (
 var (
 	ErrInvalidParameter    error = errors.New("invalid parameter")
 	ErrTooManyMissingCodes error = errors.New("too many missing codes")
+	ErrEmptyCodes          error = errors.New("empty codes")
 )
 
 const (
@@ -160,6 +161,10 @@ func (m *Manager) Decode(codes [][]byte) ([]byte, error) {
 			chunkSize = len(c)
 		}
 	}
+	if chunkSize == 0 {
+		return nil, ErrEmptyCodes
+	}
+
 	data := make([]byte, 0, chunkSize*m.numData-headerSizeInByte)
 	if !missingDataChunkExists {
 		for i := range m.numData {
