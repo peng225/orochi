@@ -66,6 +66,8 @@ paths:
                 example: 1
         '400':
           description: Bad request
+        '409':
+          description: Different bucket with the same name already exists
   /bucket/{id}:
     get:
       summary: Get a bucket

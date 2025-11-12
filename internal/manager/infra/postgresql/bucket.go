@@ -61,6 +61,27 @@ func (br *BucketRepository) GetBucket(ctx context.Context, id int64) (*entity.Bu
 	}, nil
 }
 
+func (br *BucketRepository) GetBucketByName(ctx context.Context, name string) (*entity.Bucket, error) {
+	tx := psqlutil.TxFromCtx(ctx)
+	q := br.q
+	if tx != nil {
+		q = br.q.WithTx(tx)
+	}
+	bucket, err := q.SelectBucketByName(ctx, name)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, service.ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to select bucket by name: %w", err)
+	}
+	return &entity.Bucket{
+		ID:         bucket.ID,
+		Name:       bucket.Name,
+		ECConfigID: bucket.EcConfigID,
+		Status:     string(bucket.Status),
+	}, nil
+}
+
 func (br *BucketRepository) ChangeBucketStatus(ctx context.Context, id int64, status string) error {
 	tx := psqlutil.TxFromCtx(ctx)
 	q := br.q

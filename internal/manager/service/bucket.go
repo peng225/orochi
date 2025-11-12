@@ -68,6 +68,21 @@ func (bs *BucketService) CreateBucket(ctx context.Context, name, ecConfigStr str
 			}
 		}
 
+		bucket, err := bs.bucketRepo.GetBucketByName(ctx, name)
+		if err == nil {
+			if bucket.ECConfigID != ecConfig.ID {
+				return errors.Join(fmt.Errorf("bucket with different EC config ID found: expected=%d, actual=%d",
+					ecConfig.ID, bucket.ECConfigID), ErrConflict)
+			} else if bucket.Status != "active" {
+				// FIXME: should define bucket status type.
+				return errors.Join(fmt.Errorf("bucket with different status found: %s", bucket.Status), ErrConflict)
+			}
+			id = bucket.ID
+			return nil
+		} else if !errors.Is(err, ErrNotFound) {
+			return fmt.Errorf("failed to get bucket by name: %w", err)
+		}
+
 		id, err = bs.bucketRepo.CreateBucket(ctx, &CreateBucketRequest{
 			Name:       name,
 			ECConfigID: ecConfig.ID,
