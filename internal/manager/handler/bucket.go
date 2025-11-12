@@ -54,6 +54,8 @@ func (bh *BucketHandler) CreateBucket(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, service.ErrInvalidParameter):
 			w.WriteHeader(http.StatusBadRequest)
+		case errors.Is(err, service.ErrConflict):
+			w.WriteHeader(http.StatusConflict)
 		default:
 			w.WriteHeader(http.StatusInternalServerError)
 		}

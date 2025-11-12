@@ -133,6 +133,23 @@ func (q *Queries) SelectBucket(ctx context.Context, id int64) (Bucket, error) {
 	return i, err
 }
 
+const selectBucketByName = `-- name: SelectBucketByName :one
+SELECT id, name, ec_config_id, status FROM bucket
+WHERE name = $1
+`
+
+func (q *Queries) SelectBucketByName(ctx context.Context, name string) (Bucket, error) {
+	row := q.db.QueryRowContext(ctx, selectBucketByName, name)
+	var i Bucket
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.EcConfigID,
+		&i.Status,
+	)
+	return i, err
+}
+
 const selectDatastore = `-- name: SelectDatastore :one
 SELECT id, base_url FROM datastore
 WHERE id = $1

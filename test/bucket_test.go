@@ -76,6 +76,49 @@ func TestBucket_CreateGetDelete(t *testing.T) {
 	}
 }
 
+func TestBucket_Create_Retry(t *testing.T) {
+	testCases := []struct {
+		name               string
+		firstECConfig      string
+		secondECConfig     string
+		expectedStatusCode int
+	}{
+		{
+			name:               "same EC config",
+			firstECConfig:      "2D1P",
+			secondECConfig:     "2D1P",
+			expectedStatusCode: http.StatusCreated,
+		},
+		{
+			name:               "different EC config",
+			firstECConfig:      "2D1P",
+			secondECConfig:     "3D1P",
+			expectedStatusCode: http.StatusConflict,
+		},
+	}
+
+	c, err := mgrclient.NewClient(managerBaseURL)
+	require.NoError(t, err)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			bucketName := "test-bucket"
+			reqBody := fmt.Sprintf(`{"name": "%s", "ecConfig": "%s"}`, bucketName, tc.firstECConfig)
+			createResp, err := c.CreateBucketWithBody(t.Context(), "application/json", strings.NewReader(reqBody))
+			require.NoError(t, err)
+			require.Equal(t, http.StatusCreated, createResp.StatusCode)
+			firstID := createResp.Header.Get("X-Bucket-ID")
+
+			reqBody = fmt.Sprintf(`{"name": "%s", "ecConfig": "%s"}`, bucketName, tc.secondECConfig)
+			createResp, err = c.CreateBucketWithBody(t.Context(), "application/json", strings.NewReader(reqBody))
+			require.NoError(t, err)
+			require.Equal(t, tc.expectedStatusCode, createResp.StatusCode)
+			if tc.expectedStatusCode == http.StatusCreated {
+				require.Equal(t, firstID, createResp.Header.Get("X-Bucket-ID"))
+			}
+		})
+	}
+}
+
 func TestBucket_Create_BadRequest(t *testing.T) {
 	c, err := mgrclient.NewClient(managerBaseURL)
 	require.NoError(t, err)
