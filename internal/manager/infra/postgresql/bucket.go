@@ -57,7 +57,7 @@ func (br *BucketRepository) GetBucket(ctx context.Context, id int64) (*entity.Bu
 		ID:         bucket.ID,
 		Name:       bucket.Name,
 		ECConfigID: bucket.EcConfigID,
-		Status:     string(bucket.Status),
+		Status:     entity.BucketStatus(bucket.Status),
 	}, nil
 }
 
@@ -78,11 +78,11 @@ func (br *BucketRepository) GetBucketByName(ctx context.Context, name string) (*
 		ID:         bucket.ID,
 		Name:       bucket.Name,
 		ECConfigID: bucket.EcConfigID,
-		Status:     string(bucket.Status),
+		Status:     entity.BucketStatus(bucket.Status),
 	}, nil
 }
 
-func (br *BucketRepository) ChangeBucketStatus(ctx context.Context, id int64, status string) error {
+func (br *BucketRepository) ChangeBucketStatus(ctx context.Context, id int64, status entity.BucketStatus) error {
 	tx := psqlutil.TxFromCtx(ctx)
 	q := br.q
 	if tx != nil {

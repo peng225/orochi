@@ -15,11 +15,12 @@ import (
 )
 
 type Processor struct {
-	period     time.Duration
-	tx         Transaction
-	jobRepo    JobRepository
-	bucketRepo BucketRepository
-	gwClient   *client.Client
+	period        time.Duration
+	gwClientIndex int
+	tx            Transaction
+	jobRepo       JobRepository
+	bucketRepo    BucketRepository
+	gwClients     []*client.Client
 }
 
 func NewProcessor(
@@ -27,14 +28,15 @@ func NewProcessor(
 	tx Transaction,
 	jobRepo JobRepository,
 	bucketRepo BucketRepository,
-	gwClient *client.Client,
+	gwClients []*client.Client,
 ) *Processor {
 	return &Processor{
-		period:     period,
-		tx:         tx,
-		jobRepo:    jobRepo,
-		bucketRepo: bucketRepo,
-		gwClient:   gwClient,
+		period:        period,
+		gwClientIndex: 0,
+		tx:            tx,
+		jobRepo:       jobRepo,
+		bucketRepo:    bucketRepo,
+		gwClients:     gwClients,
 	}
 }
 
@@ -89,6 +91,13 @@ func (p *Processor) processJob(ctx context.Context, job *entity.Job) error {
 	return nil
 }
 
+func (p *Processor) selectGWClient() *client.Client {
+	defer func() {
+		p.gwClientIndex = (p.gwClientIndex + 1) % len(p.gwClients)
+	}()
+	return p.gwClients[p.gwClientIndex]
+}
+
 func (p *Processor) processDeleteAllObjectsInBucketJob(ctx context.Context, job *entity.Job) (bool, error) {
 	var param entity.DeleteAllObjectsInBucketParam
 	err := json.Unmarshal(job.Data, &param)
@@ -108,7 +117,7 @@ func (p *Processor) processDeleteAllObjectsInBucketJob(ctx context.Context, job 
 			return fmt.Errorf("failed to get bucket: %w", err)
 		}
 
-		listResp, err := p.gwClient.ListObjects(ctx, b.Name, nil)
+		listResp, err := p.selectGWClient().ListObjects(ctx, b.Name, nil)
 		if err != nil {
 			return fmt.Errorf("failed to list objects: %w", err)
 		}
@@ -136,7 +145,7 @@ func (p *Processor) processDeleteAllObjectsInBucketJob(ctx context.Context, job 
 		}
 
 		for _, objectName := range objectNames {
-			delResp, err := p.gwClient.DeleteObject(ctx, b.Name, objectName)
+			delResp, err := p.selectGWClient().DeleteObject(ctx, b.Name, objectName)
 			if err != nil {
 				return fmt.Errorf("failed to delete object: %w", err)
 			}

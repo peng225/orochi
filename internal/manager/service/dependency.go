@@ -40,7 +40,7 @@ type BucketRepository interface {
 	CreateBucket(ctx context.Context, req *CreateBucketRequest) (int64, error)
 	GetBucket(ctx context.Context, id int64) (*entity.Bucket, error)
 	GetBucketByName(ctx context.Context, name string) (*entity.Bucket, error)
-	ChangeBucketStatus(ctx context.Context, id int64, status string) error
+	ChangeBucketStatus(ctx context.Context, id int64, status entity.BucketStatus) error
 }
 
 type CreateJobRequest struct {

@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 const (
@@ -113,6 +114,28 @@ func (osvc *ObjectService) GetObject(object string) ([]byte, error) {
 	return data, nil
 }
 
+func isEmptyDir(path string) (bool, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false, fmt.Errorf("stat failed: %w", err)
+	}
+	if !info.IsDir() {
+		return false, nil
+	}
+
+	f, err := os.Open(path)
+	if err != nil {
+		return false, err
+	}
+	defer f.Close()
+
+	_, err = f.Readdirnames(1)
+	if err == io.EOF {
+		return true, nil
+	}
+	return false, err
+}
+
 func (osvc *ObjectService) DeleteObject(object string) error {
 	slog.Debug("ObjectService::DeleteObject called.", "object", object)
 	if !validObjectPath.MatchString(object) {
@@ -130,8 +153,24 @@ func (osvc *ObjectService) DeleteObject(object string) error {
 		return fmt.Errorf("failed to remove file: %w", err)
 	}
 
-	// FIXME: object may include/the/intermediate/directories.
-	// In that case, those directory may be empty, and should be deleted.
+	// object may include the intermediate directories.
+	// If those directory are empty, they should be deleted.
+	intermediatePaths := strings.Split(object, "/")
+	// Exclude the last part, which corresponds to the file name.
+	for i := range len(intermediatePaths) - 1 {
+		path := filepath.Join(intermediatePaths[:len(intermediatePaths)-i-1]...)
+		path = filepath.Join(dataRoot, path)
+		empty, err := isEmptyDir(path)
+		if err != nil {
+			return fmt.Errorf("empty dir check failed: %w", err)
+		}
+		if empty {
+			err := os.Remove(path)
+			if err != nil {
+				return fmt.Errorf("failed to remove directory: %w", err)
+			}
+		}
+	}
 
 	return nil
 }

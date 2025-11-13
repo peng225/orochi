@@ -92,7 +92,7 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucketName st
 			}
 			return fmt.Errorf("failed to get bucket by name: %w", err)
 		}
-		if bucket.Status != "active" {
+		if bucket.Status != entity.BucketStatusActive {
 			return fmt.Errorf("unexpected bucket status: %s", bucket.Status)
 		}
 		om, err := osvc.omRepo.GetObjectMetadataByName(ctx, name, bucket.ID)

@@ -54,7 +54,7 @@ func TestBucket_CreateGetDelete(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, id, got.ID)
 			require.Equal(t, bucketName, got.Name)
-			require.Equal(t, "active", got.Status)
+			require.Equal(t, entity.BucketStatusActive, got.Status)
 
 			deleteResp, err := c.DeleteBucket(t.Context(), id)
 			require.NoError(t, err)
