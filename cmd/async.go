@@ -50,13 +50,15 @@ to quickly create a Cobra application.`,
 		tx := psqlutil.NewTransaction(db)
 		bucketRepo := postgresql.NewBucketRepository(db)
 		jobRepo := postgresql.NewJobRepository(db)
-		// FIXME: should use all gateway base URLs.
-		gwClient, err := client.NewClient(gwBaseURLs[0])
-		if err != nil {
-			panic(err)
+		gwClients := make([]*client.Client, len(gwBaseURLs))
+		for i := range len(gwClients) {
+			gwClients[i], err = client.NewClient(gwBaseURLs[i])
+			if err != nil {
+				panic(err)
+			}
 		}
 
-		p := process.NewProcessor(period, tx, jobRepo, bucketRepo, gwClient)
+		p := process.NewProcessor(period, tx, jobRepo, bucketRepo, gwClients)
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 		defer stop()
 		p.Start(ctx)
