@@ -40,7 +40,7 @@ func (br *BucketRepository) GetBucket(ctx context.Context, id int64) (*entity.Bu
 	return &entity.Bucket{
 		ID:     bucket.ID,
 		Name:   bucket.Name,
-		Status: string(bucket.Status),
+		Status: entity.BucketStatus(bucket.Status),
 	}, nil
 }
 

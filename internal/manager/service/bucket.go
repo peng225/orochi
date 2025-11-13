@@ -73,8 +73,7 @@ func (bs *BucketService) CreateBucket(ctx context.Context, name, ecConfigStr str
 			if bucket.ECConfigID != ecConfig.ID {
 				return errors.Join(fmt.Errorf("bucket with different EC config ID found: expected=%d, actual=%d",
 					ecConfig.ID, bucket.ECConfigID), ErrConflict)
-			} else if bucket.Status != "active" {
-				// FIXME: should define bucket status type.
+			} else if bucket.Status != entity.BucketStatusActive {
 				return errors.Join(fmt.Errorf("bucket with different status found: %s", bucket.Status), ErrConflict)
 			}
 			id = bucket.ID
@@ -115,7 +114,7 @@ func (bs *BucketService) GetBucket(ctx context.Context, id int64) (*entity.Bucke
 func (bs *BucketService) DeleteBucket(ctx context.Context, id int64) error {
 	var jobID int64
 	err := bs.tx.Do(ctx, func(ctx context.Context) error {
-		err := bs.bucketRepo.ChangeBucketStatus(ctx, id, "deleted")
+		err := bs.bucketRepo.ChangeBucketStatus(ctx, id, entity.BucketStatusDeleted)
 		if err != nil {
 			return fmt.Errorf("failed to change bucket status: %w", err)
 		}

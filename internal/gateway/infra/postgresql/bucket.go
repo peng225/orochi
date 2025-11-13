@@ -41,6 +41,6 @@ func (br *BucketRepository) GetBucketByName(ctx context.Context, name string) (*
 		ID:         b.ID,
 		Name:       b.Name,
 		ECConfigID: b.EcConfigID,
-		Status:     string(b.Status),
+		Status:     entity.BucketStatus(b.Status),
 	}, nil
 }
