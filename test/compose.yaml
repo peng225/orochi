@@ -58,7 +58,7 @@ services:
       - "datastore"
       - "--base-url=http://datastore0:8082"
       - "--manager-base-url=http://manager:8080"
-      - --log-level=debug"
+      - "--log-level=debug"
     networks:
       - testnet
     ports:
@@ -75,7 +75,7 @@ services:
       - "datastore"
       - "--base-url=http://datastore1:8083"
       - "--manager-base-url=http://manager:8080"
-      - --log-level=debug"
+      - "--log-level=debug"
     networks:
       - testnet
     ports:
@@ -92,7 +92,7 @@ services:
       - "datastore"
       - "--base-url=http://datastore2:8084"
       - "--manager-base-url=http://manager:8080"
-      - --log-level=debug"
+      - "--log-level=debug"
     networks:
       - testnet
     ports:
@@ -109,7 +109,7 @@ services:
       - "datastore"
       - "--base-url=http://datastore3:8085"
       - "--manager-base-url=http://manager:8080"
-      - --log-level=debug"
+      - "--log-level=debug"
     networks:
       - testnet
     ports:

@@ -78,13 +78,8 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucketName st
 	if !validObjectName.MatchString(name) {
 		return errors.Join(fmt.Errorf("invalid object name: %s", name), ErrInvalidParameter)
 	}
-	// FIXME: Should avoid per request refresh for performance.
-	err := osvc.Refresh(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to refresh: %w", err)
-	}
 
-	err = osvc.tx.Do(ctx, func(ctx context.Context) error {
+	err := osvc.tx.Do(ctx, func(ctx context.Context) error {
 		bucket, err := osvc.bucketRepo.GetBucketByName(ctx, bucketName)
 		if err != nil {
 			if errors.Is(err, ErrNotFound) {
@@ -135,12 +130,27 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucketName st
 			return fmt.Errorf("unexpected code length: expected=%d, actual=%d",
 				len(lg.CurrentDatastores), len(codes))
 		}
-		// FIXME: parallelize.
-		for i, ds := range lg.CurrentDatastores {
-			err = osvc.chunkRepos[ds].CreateObject(ctx, filepath.Join(bucketName, name), bytes.NewBuffer(codes[i]))
-			if err != nil {
-				return fmt.Errorf("CreateObject failed: %w", err)
+		for _, ds := range lg.CurrentDatastores {
+			if _, ok := osvc.chunkRepos[ds]; !ok {
+				err := osvc.Refresh(ctx)
+				if err != nil {
+					return fmt.Errorf("failed to refresh: %w", err)
+				}
+				break
 			}
+		}
+		eg := new(errgroup.Group)
+		for i, ds := range lg.CurrentDatastores {
+			eg.Go(func() error {
+				err = osvc.chunkRepos[ds].CreateObject(ctx, filepath.Join(bucketName, name), bytes.NewBuffer(codes[i]))
+				if err != nil {
+					return fmt.Errorf("CreateObject failed: %w", err)
+				}
+				return nil
+			})
+		}
+		if err := eg.Wait(); err != nil {
+			return fmt.Errorf("failed to create object chunk: %w", err)
 		}
 		return nil
 	})
