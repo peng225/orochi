@@ -135,12 +135,18 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucketName st
 			return fmt.Errorf("unexpected code length: expected=%d, actual=%d",
 				len(lg.CurrentDatastores), len(codes))
 		}
-		// FIXME: parallelize.
+		eg := new(errgroup.Group)
 		for i, ds := range lg.CurrentDatastores {
-			err = osvc.chunkRepos[ds].CreateObject(ctx, filepath.Join(bucketName, name), bytes.NewBuffer(codes[i]))
-			if err != nil {
-				return fmt.Errorf("CreateObject failed: %w", err)
-			}
+			eg.Go(func() error {
+				err = osvc.chunkRepos[ds].CreateObject(ctx, filepath.Join(bucketName, name), bytes.NewBuffer(codes[i]))
+				if err != nil {
+					return fmt.Errorf("CreateObject failed: %w", err)
+				}
+				return nil
+			})
+		}
+		if err := eg.Wait(); err != nil {
+			return fmt.Errorf("failed to create object chunk: %w", err)
 		}
 		return nil
 	})
