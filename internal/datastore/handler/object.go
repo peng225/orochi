@@ -26,6 +26,8 @@ func (oh *ObjectHandler) CreateObject(w http.ResponseWriter, r *http.Request, ob
 		switch {
 		case errors.Is(err, service.ErrInvalidParameter):
 			w.WriteHeader(http.StatusBadRequest)
+		case errors.Is(err, service.ErrTooLargeObject):
+			w.WriteHeader(http.StatusRequestEntityTooLarge)
 		default:
 			w.WriteHeader(http.StatusInternalServerError)
 		}

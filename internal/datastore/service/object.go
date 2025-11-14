@@ -58,8 +58,7 @@ func (osvc *ObjectService) CreateObject(object string, data io.Reader) error {
 		n, err := data.Read(buf)
 		if n > 0 {
 			if written+int64(n) > maxDataSize {
-				// FIXME: should return 4xx error.
-				return fmt.Errorf("received too large data")
+				return ErrTooLargeObject
 			}
 			if _, werr := f.Write(buf[:n]); werr != nil {
 				return fmt.Errorf("failed to write data: %w", werr)
