@@ -5,9 +5,11 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/peng225/orochi/internal/datastore/api/server"
 	"github.com/peng225/orochi/internal/datastore/handler"
+	"github.com/peng225/orochi/internal/datastore/registrar"
 	"github.com/peng225/orochi/internal/datastore/service"
 	"github.com/spf13/cobra"
 )
@@ -32,11 +34,35 @@ to quickly create a Cobra application.`,
 			Level: parseLogLevel(levelStr),
 		}))
 		slog.SetDefault(logger)
-		port, err := cmd.Flags().GetString("port")
+
+		baseURL, err := cmd.Flags().GetString("base-url")
 		if err != nil {
 			slog.Error(err.Error())
 			os.Exit(1)
 		}
+		var port string
+		hostPort := strings.Split(baseURL, ":")
+		switch len(hostPort) {
+		case 2:
+			port = "80"
+		case 3:
+			port = hostPort[2]
+		default:
+			slog.Error("Invalid BASE_URL env.", "BASE_URL", baseURL)
+			os.Exit(1)
+		}
+		baseMgrURL, err := cmd.Flags().GetString("manager-base-url")
+		if err != nil {
+			slog.Error(err.Error())
+			os.Exit(1)
+		}
+
+		err = registrar.Register(cmd.Context(), baseURL, baseMgrURL)
+		if err != nil {
+			slog.Error(err.Error())
+			os.Exit(1)
+		}
+
 		objHandler := handler.NewObjectHandler(service.NewObjectStore())
 		h := server.Handler(objHandler)
 		err = http.ListenAndServe(net.JoinHostPort("", port), h)
@@ -59,6 +85,17 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// datastoreCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	datastoreCmd.Flags().StringP("port", "p", "8082", "Port number")
+	// FIXME: support https.
+	datastoreCmd.Flags().String("base-url", "", "Base url (e.g. http://example.com:8080)")
+	datastoreCmd.Flags().String("manager-base-url", "", "Base url for manager (e.g. http://example.com:8080)")
 	setLogLevelFlag(datastoreCmd)
+
+	err := datastoreCmd.MarkFlagRequired("base-url")
+	if err != nil {
+		panic(err)
+	}
+	err = datastoreCmd.MarkFlagRequired("manager-base-url")
+	if err != nil {
+		panic(err)
+	}
 }

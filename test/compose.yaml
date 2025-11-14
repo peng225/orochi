@@ -33,12 +33,32 @@ services:
         echo 'Database initialized successfully.';
       "
     restart: "no"
+  manager:
+    image: ghcr.io/peng225/orochi:latest
+    container_name: manager
+    depends_on:
+      initdb:
+        condition: service_completed_successfully
+    command: ["manager", "-p", "8080"]
+    networks:
+      - testnet
+    ports:
+      - 8080:8080
+    environment:
+      - DSN=host=postgres port=5432 user=testuser password=testpass dbname=orochi sslmode=disable
   datastore0:
     build:
       context: ..
     image: ghcr.io/peng225/orochi:latest
     container_name: datastore0
-    command: ["datastore", "-p", "8082", "--log-level", "debug"]
+    depends_on:
+      manager:
+        condition: service_started
+    command:
+      - "datastore"
+      - "--base-url=http://datastore0:8082"
+      - "--manager-base-url=http://manager:8080"
+      - --log-level=debug"
     networks:
       - testnet
     ports:
@@ -48,7 +68,14 @@ services:
   datastore1:
     image: ghcr.io/peng225/orochi:latest
     container_name: datastore1
-    command: ["datastore", "-p", "8083", "--log-level", "debug"]
+    depends_on:
+      manager:
+        condition: service_started
+    command:
+      - "datastore"
+      - "--base-url=http://datastore1:8083"
+      - "--manager-base-url=http://manager:8080"
+      - --log-level=debug"
     networks:
       - testnet
     ports:
@@ -58,7 +85,14 @@ services:
   datastore2:
     image: ghcr.io/peng225/orochi:latest
     container_name: datastore2
-    command: ["datastore", "-p", "8084", "--log-level", "debug"]
+    depends_on:
+      manager:
+        condition: service_started
+    command:
+      - "datastore"
+      - "--base-url=http://datastore2:8084"
+      - "--manager-base-url=http://manager:8080"
+      - --log-level=debug"
     networks:
       - testnet
     ports:
@@ -68,7 +102,14 @@ services:
   datastore3:
     image: ghcr.io/peng225/orochi:latest
     container_name: datastore3
-    command: ["datastore", "-p", "8085", "--log-level", "debug"]
+    depends_on:
+      manager:
+        condition: service_started
+    command:
+      - "datastore"
+      - "--base-url=http://datastore3:8085"
+      - "--manager-base-url=http://manager:8080"
+      - --log-level=debug"
     networks:
       - testnet
     ports:
@@ -92,19 +133,6 @@ services:
       - testnet
     ports:
       - 8081:8081
-    environment:
-      - DSN=host=postgres port=5432 user=testuser password=testpass dbname=orochi sslmode=disable
-  manager:
-    image: ghcr.io/peng225/orochi:latest
-    container_name: manager
-    depends_on:
-      initdb:
-        condition: service_completed_successfully
-    command: ["manager", "-p", "8080"]
-    networks:
-      - testnet
-    ports:
-      - 8080:8080
     environment:
       - DSN=host=postgres port=5432 user=testuser password=testpass dbname=orochi sslmode=disable
   async:
