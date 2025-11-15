@@ -35,9 +35,9 @@ func (q *Queries) InsertBucket(ctx context.Context, arg InsertBucketParams) (int
 
 const insertDatastore = `-- name: InsertDatastore :one
 INSERT INTO datastore (
-   base_url
+   base_url, status
 ) VALUES (
-  $1
+  $1, 'active'
 )
 RETURNING id
 `
@@ -151,14 +151,14 @@ func (q *Queries) SelectBucketByName(ctx context.Context, name string) (Bucket, 
 }
 
 const selectDatastore = `-- name: SelectDatastore :one
-SELECT id, base_url FROM datastore
+SELECT id, base_url, status FROM datastore
 WHERE id = $1
 `
 
 func (q *Queries) SelectDatastore(ctx context.Context, id int64) (Datastore, error) {
 	row := q.db.QueryRowContext(ctx, selectDatastore, id)
 	var i Datastore
-	err := row.Scan(&i.ID, &i.BaseUrl)
+	err := row.Scan(&i.ID, &i.BaseUrl, &i.Status)
 	return i, err
 }
 

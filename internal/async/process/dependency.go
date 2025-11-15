@@ -19,3 +19,16 @@ type BucketRepository interface {
 	GetBucket(ctx context.Context, id int64) (*entity.Bucket, error)
 	DeleteBucket(ctx context.Context, id int64) error
 }
+
+type DatastoreRepository interface {
+	GetDatastores(ctx context.Context) ([]*entity.Datastore, error)
+	ChangeDatastoreStatus(ctx context.Context, id int64, status entity.DatastoreStatus) error
+}
+
+type DatastoreClient interface {
+	CheckHealthStatus(ctx context.Context) error
+}
+
+type DatastoreClientFactory interface {
+	New(ds *entity.Datastore) DatastoreClient
+}

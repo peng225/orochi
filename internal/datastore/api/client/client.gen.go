@@ -90,6 +90,9 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
+	// CheckHealthStatus request
+	CheckHealthStatus(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// DeleteObject request
 	DeleteObject(ctx context.Context, object Object, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -98,6 +101,18 @@ type ClientInterface interface {
 
 	// CreateObjectWithBody request with any body
 	CreateObjectWithBody(ctx context.Context, object Object, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
+
+func (c *Client) CheckHealthStatus(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCheckHealthStatusRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 func (c *Client) DeleteObject(ctx context.Context, object Object, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -134,6 +149,33 @@ func (c *Client) CreateObjectWithBody(ctx context.Context, object Object, conten
 		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+// NewCheckHealthStatusRequest generates requests for CheckHealthStatus
+func NewCheckHealthStatusRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/health")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }
 
 // NewDeleteObjectRequest generates requests for DeleteObject
@@ -283,6 +325,9 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
+	// CheckHealthStatusWithResponse request
+	CheckHealthStatusWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*CheckHealthStatusResponse, error)
+
 	// DeleteObjectWithResponse request
 	DeleteObjectWithResponse(ctx context.Context, object Object, reqEditors ...RequestEditorFn) (*DeleteObjectResponse, error)
 
@@ -291,6 +336,27 @@ type ClientWithResponsesInterface interface {
 
 	// CreateObjectWithBodyWithResponse request with any body
 	CreateObjectWithBodyWithResponse(ctx context.Context, object Object, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateObjectResponse, error)
+}
+
+type CheckHealthStatusResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r CheckHealthStatusResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CheckHealthStatusResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
 }
 
 type DeleteObjectResponse struct {
@@ -356,6 +422,15 @@ func (r CreateObjectResponse) StatusCode() int {
 	return 0
 }
 
+// CheckHealthStatusWithResponse request returning *CheckHealthStatusResponse
+func (c *ClientWithResponses) CheckHealthStatusWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*CheckHealthStatusResponse, error) {
+	rsp, err := c.CheckHealthStatus(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCheckHealthStatusResponse(rsp)
+}
+
 // DeleteObjectWithResponse request returning *DeleteObjectResponse
 func (c *ClientWithResponses) DeleteObjectWithResponse(ctx context.Context, object Object, reqEditors ...RequestEditorFn) (*DeleteObjectResponse, error) {
 	rsp, err := c.DeleteObject(ctx, object, reqEditors...)
@@ -381,6 +456,22 @@ func (c *ClientWithResponses) CreateObjectWithBodyWithResponse(ctx context.Conte
 		return nil, err
 	}
 	return ParseCreateObjectResponse(rsp)
+}
+
+// ParseCheckHealthStatusResponse parses an HTTP response from a CheckHealthStatusWithResponse call
+func ParseCheckHealthStatusResponse(rsp *http.Response) (*CheckHealthStatusResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CheckHealthStatusResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
 }
 
 // ParseDeleteObjectResponse parses an HTTP response from a DeleteObjectWithResponse call

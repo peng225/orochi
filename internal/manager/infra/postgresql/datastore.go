@@ -53,6 +53,7 @@ func (dr *DatastoreRepository) GetDatastore(ctx context.Context, id int64) (*ent
 	return &entity.Datastore{
 		ID:      ds.ID,
 		BaseURL: ds.BaseUrl,
+		Status:  entity.DatastoreStatus(ds.Status),
 	}, nil
 }
 

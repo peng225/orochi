@@ -31,6 +31,7 @@ type CreateDatastoreRequest struct {
 type Datastore struct {
 	BaseURL *string `json:"baseURL,omitempty"`
 	Id      *int64  `json:"id,omitempty"`
+	Status  *string `json:"status,omitempty"`
 }
 
 // BucketID defines model for bucketID.

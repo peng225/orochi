@@ -12,15 +12,21 @@ import (
 
 	"github.com/peng225/orochi/internal/entity"
 	"github.com/peng225/orochi/internal/gateway/api/client"
+	"golang.org/x/sync/errgroup"
 )
 
+// FIXME: should abstract the http client.
+// FIXME: what to do if gateway is deleted or newly created?
 type Processor struct {
 	period        time.Duration
 	gwClientIndex int
 	tx            Transaction
 	jobRepo       JobRepository
 	bucketRepo    BucketRepository
+	dsRepo        DatastoreRepository
 	gwClients     []*client.Client
+	dscFactory    DatastoreClientFactory
+	dsDownCount   map[int64]int
 }
 
 func NewProcessor(
@@ -28,7 +34,9 @@ func NewProcessor(
 	tx Transaction,
 	jobRepo JobRepository,
 	bucketRepo BucketRepository,
+	dsRepo DatastoreRepository,
 	gwClients []*client.Client,
+	dscFactory DatastoreClientFactory,
 ) *Processor {
 	return &Processor{
 		period:        period,
@@ -36,7 +44,10 @@ func NewProcessor(
 		tx:            tx,
 		jobRepo:       jobRepo,
 		bucketRepo:    bucketRepo,
+		dsRepo:        dsRepo,
 		gwClients:     gwClients,
+		dscFactory:    dscFactory,
+		dsDownCount:   make(map[int64]int),
 	}
 }
 
@@ -64,6 +75,10 @@ func (p *Processor) Start(ctx context.Context) {
 					slog.Error("Failed to process job.",
 						"ID", job.ID, "Kind", job.Kind, "err", err)
 				}
+			}
+			err = p.checkDatastoreHealthStatus(ctx)
+			if err != nil {
+				slog.Error("Failed to check datastore health status.", "err", err)
 			}
 		}
 	}
@@ -159,4 +174,57 @@ func (p *Processor) processDeleteAllObjectsInBucketJob(ctx context.Context, job 
 		return false, fmt.Errorf("transaction failed: %w", err)
 	}
 	return finished, nil
+}
+
+func (p *Processor) checkDatastoreHealthStatus(ctx context.Context) error {
+	var dss []*entity.Datastore
+	err := p.tx.Do(ctx, func(ctx context.Context) error {
+		var err error
+		dss, err = p.dsRepo.GetDatastores(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get datastores: %w", err)
+		}
+
+		eg := new(errgroup.Group)
+		for _, ds := range dss {
+			eg.Go(func() error {
+				dsClient := p.dscFactory.New(ds)
+				err := dsClient.CheckHealthStatus(ctx)
+				if err != nil {
+					p.dsDownCount[ds.ID]++
+					if p.dsDownCount[ds.ID] >= 2 {
+						err := p.dsRepo.ChangeDatastoreStatus(ctx, ds.ID, entity.DatastoreStatusDown)
+						if err != nil {
+							return fmt.Errorf("failed to update datastore status: %w", err)
+						}
+						slog.Info("Datastore outage detected.", "id", ds.ID)
+					}
+				}
+				return nil
+			})
+		}
+		if err := eg.Wait(); err != nil {
+			return fmt.Errorf("failed to check health status of datastores: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("transaction failed: %w", err)
+	}
+
+	shouldBeDeletedIDs := make([]int64, 0)
+OUTER:
+	for dsID := range p.dsDownCount {
+		for _, ds := range dss {
+			if ds.ID == dsID {
+				continue OUTER
+			}
+		}
+		shouldBeDeletedIDs = append(shouldBeDeletedIDs, dsID)
+	}
+	for _, id := range shouldBeDeletedIDs {
+		delete(p.dsDownCount, id)
+	}
+
+	return nil
 }

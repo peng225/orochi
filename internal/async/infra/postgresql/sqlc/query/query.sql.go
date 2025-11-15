@@ -46,6 +46,33 @@ func (q *Queries) SelectBucket(ctx context.Context, id int64) (Bucket, error) {
 	return i, err
 }
 
+const selectDatastores = `-- name: SelectDatastores :many
+SELECT id, base_url, status FROM datastore
+`
+
+func (q *Queries) SelectDatastores(ctx context.Context) ([]Datastore, error) {
+	rows, err := q.db.QueryContext(ctx, selectDatastores)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Datastore
+	for rows.Next() {
+		var i Datastore
+		if err := rows.Scan(&i.ID, &i.BaseUrl, &i.Status); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const selectJobs = `-- name: SelectJobs :many
 SELECT id, kind, data FROM job
 LIMIT $1
@@ -72,4 +99,20 @@ func (q *Queries) SelectJobs(ctx context.Context, limit int32) ([]Job, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateDatastoreStatus = `-- name: UpdateDatastoreStatus :exec
+UPDATE datastore
+SET status = $1
+WHERE id = $2
+`
+
+type UpdateDatastoreStatusParams struct {
+	Status DatastoreStatus
+	ID     int64
+}
+
+func (q *Queries) UpdateDatastoreStatus(ctx context.Context, arg UpdateDatastoreStatusParams) error {
+	_, err := q.db.ExecContext(ctx, updateDatastoreStatus, arg.Status, arg.ID)
+	return err
 }

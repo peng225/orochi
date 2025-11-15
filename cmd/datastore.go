@@ -64,7 +64,14 @@ to quickly create a Cobra application.`,
 		}
 
 		objHandler := handler.NewObjectHandler(service.NewObjectStore())
-		h := server.Handler(objHandler)
+		healthHandler := handler.NewHealthHandler()
+		h := server.Handler(struct {
+			*handler.ObjectHandler
+			*handler.HealthHandler
+		}{
+			objHandler,
+			healthHandler,
+		})
 		err = http.ListenAndServe(net.JoinHostPort("", port), h)
 		if err != nil {
 			slog.Error("Server failed to start.", "err", err)

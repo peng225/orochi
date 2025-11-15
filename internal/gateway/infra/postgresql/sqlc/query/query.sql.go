@@ -63,7 +63,7 @@ func (q *Queries) SelectBucketByName(ctx context.Context, name string) (Bucket, 
 }
 
 const selectDatastores = `-- name: SelectDatastores :many
-SELECT id, base_url FROM datastore
+SELECT id, base_url, status FROM datastore
 `
 
 func (q *Queries) SelectDatastores(ctx context.Context) ([]Datastore, error) {
@@ -75,7 +75,7 @@ func (q *Queries) SelectDatastores(ctx context.Context) ([]Datastore, error) {
 	var items []Datastore
 	for rows.Next() {
 		var i Datastore
-		if err := rows.Scan(&i.ID, &i.BaseUrl); err != nil {
+		if err := rows.Scan(&i.ID, &i.BaseUrl, &i.Status); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
