@@ -17,6 +17,9 @@ type Object = string
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Health check
+	// (GET /health)
+	CheckHealthStatus(w http.ResponseWriter, r *http.Request)
 	// Delete a object
 	// (DELETE /{object})
 	DeleteObject(w http.ResponseWriter, r *http.Request, object Object)
@@ -36,6 +39,20 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// CheckHealthStatus operation middleware
+func (siw *ServerInterfaceWrapper) CheckHealthStatus(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CheckHealthStatus(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // DeleteObject operation middleware
 func (siw *ServerInterfaceWrapper) DeleteObject(w http.ResponseWriter, r *http.Request) {
@@ -232,6 +249,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	m.HandleFunc("GET "+options.BaseURL+"/health", wrapper.CheckHealthStatus)
 	m.HandleFunc("DELETE "+options.BaseURL+"/{object}", wrapper.DeleteObject)
 	m.HandleFunc("GET "+options.BaseURL+"/{object}", wrapper.GetObject)
 	m.HandleFunc("PUT "+options.BaseURL+"/{object}", wrapper.CreateObject)

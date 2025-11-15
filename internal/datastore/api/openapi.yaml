@@ -9,6 +9,13 @@ info:
 
 security: []
 paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: checkHealthStatus
+      responses:
+        '200':
+          description: Healthy
   /{object}:
     put:
       summary: Create a object
