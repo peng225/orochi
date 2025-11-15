@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/peng225/orochi/internal/async/infra/datastore"
 	"github.com/peng225/orochi/internal/async/infra/postgresql"
 	"github.com/peng225/orochi/internal/async/process"
 	"github.com/peng225/orochi/internal/gateway/api/client"
@@ -50,6 +51,7 @@ to quickly create a Cobra application.`,
 		tx := psqlutil.NewTransaction(db)
 		bucketRepo := postgresql.NewBucketRepository(db)
 		jobRepo := postgresql.NewJobRepository(db)
+		dsRepo := postgresql.NewDatastoreRepository(db)
 		gwClients := make([]*client.Client, len(gwBaseURLs))
 		for i := range len(gwClients) {
 			gwClients[i], err = client.NewClient(gwBaseURLs[i])
@@ -57,8 +59,9 @@ to quickly create a Cobra application.`,
 				panic(err)
 			}
 		}
+		dscFactory := datastore.NewClientFactory()
 
-		p := process.NewProcessor(period, tx, jobRepo, bucketRepo, gwClients)
+		p := process.NewProcessor(period, tx, jobRepo, bucketRepo, dsRepo, gwClients, dscFactory)
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 		defer stop()
 		p.Start(ctx)
