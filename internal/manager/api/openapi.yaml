@@ -106,6 +106,9 @@ components:
         baseURL:
           type: string
           example: http://example.com:8080
+        status:
+          type: string
+          example: active
     createBucketRequest:
       type: object
       properties:

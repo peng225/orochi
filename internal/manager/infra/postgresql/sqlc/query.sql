@@ -1,8 +1,8 @@
 -- name: InsertDatastore :one
 INSERT INTO datastore (
-   base_url
+   base_url, status
 ) VALUES (
-  $1
+  $1, 'active'
 )
 RETURNING id;
 
