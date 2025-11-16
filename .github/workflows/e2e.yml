@@ -19,3 +19,17 @@ jobs:
       run: |
         make -C test prepare
         make -C test test
+
+  e2e-test-with-down-datastore:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v5
+    - name: Set up Go
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: go.mod
+    - name: E2E test
+      run: |
+        make -C test prepare
+        docker stop datastore0
+        make -C test test-io-only

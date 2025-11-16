@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/peng225/orochi/internal/datastore/api/client"
 )
@@ -13,7 +14,11 @@ type Client struct {
 }
 
 func NewClient(baseURL string) *Client {
-	c, err := client.NewClient(baseURL)
+	c, err := client.NewClient(baseURL, client.WithHTTPClient(
+		&http.Client{
+			Timeout: 2 * time.Second,
+		},
+	))
 	if err != nil {
 		panic(err)
 	}
