@@ -191,6 +191,9 @@ func (p *Processor) checkDatastoreHealthStatus(ctx context.Context) error {
 				dsClient := p.dscFactory.New(ds)
 				err := dsClient.CheckHealthStatus(ctx)
 				if err != nil {
+					if ds.Status == entity.DatastoreStatusDown {
+						return nil
+					}
 					p.dsDownCount[ds.ID]++
 					if p.dsDownCount[ds.ID] >= 2 {
 						err := p.dsRepo.ChangeDatastoreStatus(ctx, ds.ID, entity.DatastoreStatusDown)
