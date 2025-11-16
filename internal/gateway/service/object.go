@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"sync/atomic"
 
 	"github.com/peng225/orochi/internal/entity"
 	"github.com/peng225/orochi/internal/pkg/ec"
@@ -140,16 +141,19 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucketName st
 			}
 		}
 		eg := new(errgroup.Group)
+		var errorCount atomic.Int32
 		for i, ds := range lg.CurrentDatastores {
 			eg.Go(func() error {
 				err = osvc.chunkRepos[ds].CreateObject(ctx, filepath.Join(bucketName, name), bytes.NewBuffer(codes[i]))
 				if err != nil {
+					errorCount.Add(1)
 					return fmt.Errorf("CreateObject failed: %w", err)
 				}
 				return nil
 			})
 		}
-		if err := eg.Wait(); err != nil {
+		// FIXME: It is dangerous to accept PUT when numParity datastores are down.
+		if err := eg.Wait(); err != nil && errorCount.Load() > int32(ecConfig.NumParity) {
 			return fmt.Errorf("failed to create object chunk: %w", err)
 		}
 		return nil
@@ -195,24 +199,26 @@ func (osvc *ObjectService) GetObject(ctx context.Context, name, bucketName strin
 	}
 
 	eg := new(errgroup.Group)
-	// FIXME: should decode even if some datastores are down.
+	var errorCount atomic.Int32
 	codes := make([][]byte, ecConfig.NumData+ecConfig.NumParity)
-	for i, ds := range lg.CurrentDatastores[:ecConfig.NumData] {
+	for i, ds := range lg.CurrentDatastores {
 		eg.Go(func() error {
 			rc, err := osvc.chunkRepos[ds].GetObject(ctx, filepath.Join(bucketName, name))
 			if err != nil {
+				errorCount.Add(1)
 				return fmt.Errorf("GetObject failed: %w", err)
 			}
 			defer rc.Close()
 			data, err := io.ReadAll(rc)
 			if err != nil {
+				errorCount.Add(1)
 				return fmt.Errorf("failed to read data: %w", err)
 			}
 			codes[i] = data
 			return nil
 		})
 	}
-	if err := eg.Wait(); err != nil {
+	if err := eg.Wait(); err != nil && errorCount.Load() > int32(ecConfig.NumParity) {
 		return nil, fmt.Errorf("failed to get object chunk: %w", err)
 	}
 
@@ -279,12 +285,27 @@ func (osvc *ObjectService) DeleteObject(ctx context.Context, name, bucketName st
 			// FIXME: double delete.
 			return fmt.Errorf("unsupported behavior")
 		}
+
+		eg := new(errgroup.Group)
+		var errorCount atomic.Int32
 		for _, ds := range lg.CurrentDatastores {
-			err = osvc.chunkRepos[ds].DeleteObject(ctx, filepath.Join(bucketName, name))
-			if err != nil {
-				return fmt.Errorf("DeleteObject failed: %w", err)
-			}
+			eg.Go(func() error {
+				err = osvc.chunkRepos[ds].DeleteObject(ctx, filepath.Join(bucketName, name))
+				if err != nil {
+					errorCount.Add(1)
+					return fmt.Errorf("DeleteObject failed: %w", err)
+				}
+				return nil
+			})
 		}
+		// Even if deletes fail for all datastores, logging this fact
+		// allows for recovery later. However, to avoid failing
+		// to notice if a bug causes deletes to never succeed at all,
+		// we require that deletes succeed for at least one datastore.
+		if err := eg.Wait(); err != nil && errorCount.Load() == int32(len(lg.CurrentDatastores)) {
+			return fmt.Errorf("failed to delete object chunk: %w", err)
+		}
+
 		err = osvc.omRepo.DeleteObjectMetadata(ctx, om.ID)
 		if err != nil {
 			return fmt.Errorf("failed to delete object metadata: %w", err)

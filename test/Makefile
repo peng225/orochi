@@ -11,6 +11,10 @@ setup:
 test:
 	go test -v ./...
 
+.PHONY: test-io-only
+test-io-only:
+	go test -v ./util.go ./object_test.go
+
 data/datastore%:
 	mkdir -p $@
 
