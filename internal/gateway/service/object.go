@@ -29,8 +29,8 @@ var (
 
 type ObjectService struct {
 	tx         Transaction
-	chunkRepos map[int64]ChunkRepository
-	crFactory  ChunkRepositoryFactory
+	dsClients  map[int64]DatastoreClient
+	dscFactory DatastoreClientFactory
 	dsRepo     DatastoreRepository
 	omRepo     ObjectMetadataRepository
 	bucketRepo BucketRepository
@@ -40,21 +40,21 @@ type ObjectService struct {
 
 func NewObjectStore(
 	tx Transaction,
-	chunkRepos map[int64]ChunkRepository,
-	crFactory ChunkRepositoryFactory,
+	dsClients map[int64]DatastoreClient,
+	dscFactory DatastoreClientFactory,
 	dsRepo DatastoreRepository,
 	omRepo ObjectMetadataRepository,
 	bucketRepo BucketRepository,
 	lgRepo LocationGroupRepository,
 	eccRepo ECConfigRepository,
 ) *ObjectService {
-	if chunkRepos == nil {
-		chunkRepos = make(map[int64]ChunkRepository)
+	if dsClients == nil {
+		dsClients = make(map[int64]DatastoreClient)
 	}
 	return &ObjectService{
 		tx:         tx,
-		chunkRepos: chunkRepos,
-		crFactory:  crFactory,
+		dsClients:  dsClients,
+		dscFactory: dscFactory,
 		dsRepo:     dsRepo,
 		omRepo:     omRepo,
 		bucketRepo: bucketRepo,
@@ -69,7 +69,7 @@ func (osvc *ObjectService) Refresh(ctx context.Context) error {
 		return fmt.Errorf("failed to get datastores: %w", err)
 	}
 	for _, ds := range dss {
-		osvc.chunkRepos[ds.ID] = osvc.crFactory.New(ds)
+		osvc.dsClients[ds.ID] = osvc.dscFactory.New(ds)
 	}
 	return nil
 }
@@ -132,7 +132,7 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucketName st
 				len(lg.CurrentDatastores), len(codes))
 		}
 		for _, ds := range lg.CurrentDatastores {
-			if _, ok := osvc.chunkRepos[ds]; !ok {
+			if _, ok := osvc.dsClients[ds]; !ok {
 				err := osvc.Refresh(ctx)
 				if err != nil {
 					return fmt.Errorf("failed to refresh: %w", err)
@@ -144,7 +144,7 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucketName st
 		var errorCount atomic.Int32
 		for i, ds := range lg.CurrentDatastores {
 			eg.Go(func() error {
-				err = osvc.chunkRepos[ds].CreateObject(ctx, filepath.Join(bucketName, name), bytes.NewBuffer(codes[i]))
+				err = osvc.dsClients[ds].CreateObject(ctx, filepath.Join(bucketName, name), bytes.NewBuffer(codes[i]))
 				if err != nil {
 					errorCount.Add(1)
 					return fmt.Errorf("CreateObject failed: %w", err)
@@ -203,7 +203,7 @@ func (osvc *ObjectService) GetObject(ctx context.Context, name, bucketName strin
 	codes := make([][]byte, ecConfig.NumData+ecConfig.NumParity)
 	for i, ds := range lg.CurrentDatastores {
 		eg.Go(func() error {
-			rc, err := osvc.chunkRepos[ds].GetObject(ctx, filepath.Join(bucketName, name))
+			rc, err := osvc.dsClients[ds].GetObject(ctx, filepath.Join(bucketName, name))
 			if err != nil {
 				errorCount.Add(1)
 				return fmt.Errorf("GetObject failed: %w", err)
@@ -290,7 +290,7 @@ func (osvc *ObjectService) DeleteObject(ctx context.Context, name, bucketName st
 		var errorCount atomic.Int32
 		for _, ds := range lg.CurrentDatastores {
 			eg.Go(func() error {
-				err = osvc.chunkRepos[ds].DeleteObject(ctx, filepath.Join(bucketName, name))
+				err = osvc.dsClients[ds].DeleteObject(ctx, filepath.Join(bucketName, name))
 				if err != nil {
 					errorCount.Add(1)
 					return fmt.Errorf("DeleteObject failed: %w", err)

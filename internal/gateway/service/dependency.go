@@ -19,14 +19,14 @@ type DatastoreRepository interface {
 	GetDatastores(ctx context.Context) ([]*entity.Datastore, error)
 }
 
-type ChunkRepository interface {
+type DatastoreClient interface {
 	CreateObject(ctx context.Context, object string, data io.Reader) error
 	GetObject(ctx context.Context, object string) (io.ReadCloser, error)
 	DeleteObject(ctx context.Context, object string) error
 }
 
-type ChunkRepositoryFactory interface {
-	New(ds *entity.Datastore) ChunkRepository
+type DatastoreClientFactory interface {
+	New(ds *entity.Datastore) DatastoreClient
 }
 
 type CreateObjectMetadataRequest struct {

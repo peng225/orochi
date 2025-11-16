@@ -11,6 +11,6 @@ func NewClientFactory() *ClientFactory {
 	return &ClientFactory{}
 }
 
-func (cf *ClientFactory) New(ds *entity.Datastore) service.ChunkRepository {
+func (cf *ClientFactory) New(ds *entity.Datastore) service.DatastoreClient {
 	return NewClient(ds.BaseURL)
 }
