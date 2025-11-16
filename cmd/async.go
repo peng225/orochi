@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/peng225/orochi/internal/async/infra/datastore"
+	"github.com/peng225/orochi/internal/async/infra/gateway"
 	"github.com/peng225/orochi/internal/async/infra/postgresql"
 	"github.com/peng225/orochi/internal/async/process"
-	"github.com/peng225/orochi/internal/gateway/api/client"
 	"github.com/peng225/orochi/internal/pkg/psqlutil"
 	"github.com/spf13/cobra"
 )
@@ -52,12 +52,9 @@ to quickly create a Cobra application.`,
 		bucketRepo := postgresql.NewBucketRepository(db)
 		jobRepo := postgresql.NewJobRepository(db)
 		dsRepo := postgresql.NewDatastoreRepository(db)
-		gwClients := make([]*client.Client, len(gwBaseURLs))
+		gwClients := make([]process.GatewayClient, len(gwBaseURLs))
 		for i := range len(gwClients) {
-			gwClients[i], err = client.NewClient(gwBaseURLs[i])
-			if err != nil {
-				panic(err)
-			}
+			gwClients[i] = gateway.NewClient(gwBaseURLs[i])
 		}
 		dscFactory := datastore.NewClientFactory()
 

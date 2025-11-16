@@ -5,17 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
 	"time"
 
 	"github.com/peng225/orochi/internal/entity"
-	"github.com/peng225/orochi/internal/gateway/api/client"
 	"golang.org/x/sync/errgroup"
 )
 
-// FIXME: should abstract the http client.
 // FIXME: what to do if gateway is deleted or newly created?
 type Processor struct {
 	period        time.Duration
@@ -24,7 +20,7 @@ type Processor struct {
 	jobRepo       JobRepository
 	bucketRepo    BucketRepository
 	dsRepo        DatastoreRepository
-	gwClients     []*client.Client
+	gwClients     []GatewayClient
 	dscFactory    DatastoreClientFactory
 	dsDownCount   map[int64]int
 }
@@ -35,7 +31,7 @@ func NewProcessor(
 	jobRepo JobRepository,
 	bucketRepo BucketRepository,
 	dsRepo DatastoreRepository,
-	gwClients []*client.Client,
+	gwClients []GatewayClient,
 	dscFactory DatastoreClientFactory,
 ) *Processor {
 	return &Processor{
@@ -106,7 +102,7 @@ func (p *Processor) processJob(ctx context.Context, job *entity.Job) error {
 	return nil
 }
 
-func (p *Processor) selectGWClient() *client.Client {
+func (p *Processor) selectGWClient() GatewayClient {
 	defer func() {
 		p.gwClientIndex = (p.gwClientIndex + 1) % len(p.gwClients)
 	}()
@@ -132,22 +128,9 @@ func (p *Processor) processDeleteAllObjectsInBucketJob(ctx context.Context, job 
 			return fmt.Errorf("failed to get bucket: %w", err)
 		}
 
-		listResp, err := p.selectGWClient().ListObjects(ctx, b.Name, nil)
+		objectNames, err := p.selectGWClient().ListObjectNames(ctx, b.Name)
 		if err != nil {
 			return fmt.Errorf("failed to list objects: %w", err)
-		}
-		defer listResp.Body.Close()
-		if listResp.StatusCode != http.StatusOK {
-			return fmt.Errorf("unexpected status code: %d", listResp.StatusCode)
-		}
-		data, err := io.ReadAll(listResp.Body)
-		if err != nil {
-			return fmt.Errorf("failed to read body: %w", err)
-		}
-		objectNames := make([]string, 0)
-		err = json.Unmarshal(data, &objectNames)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal object names: %w", err)
 		}
 		if len(objectNames) == 0 {
 			slog.Info("No object found in the bucket. Job finished.", "bucketID", param.BucketID)
@@ -160,12 +143,9 @@ func (p *Processor) processDeleteAllObjectsInBucketJob(ctx context.Context, job 
 		}
 
 		for _, objectName := range objectNames {
-			delResp, err := p.selectGWClient().DeleteObject(ctx, b.Name, objectName)
+			err := p.selectGWClient().DeleteObject(ctx, b.Name, objectName)
 			if err != nil {
 				return fmt.Errorf("failed to delete object: %w", err)
-			}
-			if delResp.StatusCode != http.StatusNoContent {
-				return fmt.Errorf("unexpected status code: %d", delResp.StatusCode)
 			}
 		}
 		return nil
