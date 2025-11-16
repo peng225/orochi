@@ -25,6 +25,11 @@ type DatastoreRepository interface {
 	ChangeDatastoreStatus(ctx context.Context, id int64, status entity.DatastoreStatus) error
 }
 
+type GatewayClient interface {
+	DeleteObject(ctx context.Context, bucket, object string) error
+	ListObjectNames(ctx context.Context, bucket string) ([]string, error)
+}
+
 type DatastoreClient interface {
 	CheckHealthStatus(ctx context.Context) error
 }
