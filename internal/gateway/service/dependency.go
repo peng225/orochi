@@ -45,6 +45,7 @@ type ObjectMetadataRepository interface {
 	CreateObjectMetadata(ctx context.Context, req *CreateObjectMetadataRequest) (int64, error)
 	GetObjectMetadataByName(ctx context.Context, name string, bucketID int64) (*entity.ObjectMetadata, error)
 	GetObjectMetadatas(ctx context.Context, req *GetObjectMetadatasRequest) ([]*entity.ObjectMetadata, error)
+	ChangeObjectStatus(ctx context.Context, id int64, status entity.ObjectStatus) error
 	DeleteObjectMetadata(ctx context.Context, id int64) error
 }
 

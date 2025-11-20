@@ -156,6 +156,11 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucketName st
 		if err := eg.Wait(); err != nil && errorCount.Load() > int32(ecConfig.NumParity) {
 			return fmt.Errorf("failed to create object chunk: %w", err)
 		}
+
+		err = osvc.omRepo.ChangeObjectStatus(ctx, om.ID, entity.ObjectStatusActive)
+		if err != nil {
+			return fmt.Errorf("failed to change object status: %w", err)
+		}
 		return nil
 	})
 	if err != nil {

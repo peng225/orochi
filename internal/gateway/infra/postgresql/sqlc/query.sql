@@ -4,16 +4,22 @@ SELECT * FROM datastore;
 -- name: InsertObjectMetadata :one
 INSERT INTO object_metadata (
    name,
+   status,
    bucket_id,
    location_group_id
 ) VALUES (
-  $1, $2, $3
+  $1, 'creating', $2, $3
 )
 RETURNING id;
 
 -- name: SelectObjectMetadataByName :many
 SELECT * FROM object_metadata
 WHERE name = $1 AND bucket_id = $2;
+
+-- name: UpdateObjectMetadataStatus :exec
+UPDATE object_metadata
+SET status = $1
+WHERE id = $2;
 
 -- name: DeleteObjectMetadata :exec
 DELETE FROM object_metadata

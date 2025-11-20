@@ -35,10 +35,11 @@ func (q *Queries) DeleteObjectVersionsByObjectID(ctx context.Context, objectID i
 const insertObjectMetadata = `-- name: InsertObjectMetadata :one
 INSERT INTO object_metadata (
    name,
+   status,
    bucket_id,
    location_group_id
 ) VALUES (
-  $1, $2, $3
+  $1, 'creating', $2, $3
 )
 RETURNING id
 `
@@ -185,7 +186,7 @@ func (q *Queries) SelectLocationGroupsByECConfigID(ctx context.Context, ecConfig
 }
 
 const selectObjectMetadataByName = `-- name: SelectObjectMetadataByName :many
-SELECT id, name, bucket_id, location_group_id FROM object_metadata
+SELECT id, name, status, bucket_id, location_group_id FROM object_metadata
 WHERE name = $1 AND bucket_id = $2
 `
 
@@ -206,6 +207,7 @@ func (q *Queries) SelectObjectMetadataByName(ctx context.Context, arg SelectObje
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.Status,
 			&i.BucketID,
 			&i.LocationGroupID,
 		); err != nil {
@@ -223,7 +225,7 @@ func (q *Queries) SelectObjectMetadataByName(ctx context.Context, arg SelectObje
 }
 
 const selectObjectMetadatas = `-- name: SelectObjectMetadatas :many
-SELECT id, name, bucket_id, location_group_id FROM object_metadata
+SELECT id, name, status, bucket_id, location_group_id FROM object_metadata
 WHERE id >= $1 AND bucket_id = $2
 LIMIT $3
 `
@@ -246,6 +248,7 @@ func (q *Queries) SelectObjectMetadatas(ctx context.Context, arg SelectObjectMet
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.Status,
 			&i.BucketID,
 			&i.LocationGroupID,
 		); err != nil {
@@ -260,4 +263,20 @@ func (q *Queries) SelectObjectMetadatas(ctx context.Context, arg SelectObjectMet
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateObjectMetadataStatus = `-- name: UpdateObjectMetadataStatus :exec
+UPDATE object_metadata
+SET status = $1
+WHERE id = $2
+`
+
+type UpdateObjectMetadataStatusParams struct {
+	Status ObjectStatus
+	ID     int64
+}
+
+func (q *Queries) UpdateObjectMetadataStatus(ctx context.Context, arg UpdateObjectMetadataStatusParams) error {
+	_, err := q.db.ExecContext(ctx, updateObjectMetadataStatus, arg.Status, arg.ID)
+	return err
 }
