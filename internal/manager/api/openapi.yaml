@@ -27,6 +27,7 @@ paths:
               description: Created datastore ID.
               schema:
                 type: integer
+                format: int64
                 example: 1
         '400':
           description: Bad request
