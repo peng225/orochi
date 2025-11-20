@@ -8,6 +8,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"time"
 )
 
 type BucketStatus string
@@ -131,4 +132,10 @@ type ObjectMetadatum struct {
 	Name            string
 	BucketID        int64
 	LocationGroupID int64
+}
+
+type ObjectVersion struct {
+	ID         int64
+	UpdateTime time.Time
+	ObjectID   int64
 }

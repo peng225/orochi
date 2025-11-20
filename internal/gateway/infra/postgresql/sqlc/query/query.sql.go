@@ -7,6 +7,7 @@ package query
 
 import (
 	"context"
+	"time"
 
 	"github.com/lib/pq"
 )
@@ -18,6 +19,16 @@ WHERE id = $1
 
 func (q *Queries) DeleteObjectMetadata(ctx context.Context, id int64) error {
 	_, err := q.db.ExecContext(ctx, deleteObjectMetadata, id)
+	return err
+}
+
+const deleteObjectVersionsByObjectID = `-- name: DeleteObjectVersionsByObjectID :exec
+DELETE FROM object_version
+WHERE object_id = $1
+`
+
+func (q *Queries) DeleteObjectVersionsByObjectID(ctx context.Context, objectID int64) error {
+	_, err := q.db.ExecContext(ctx, deleteObjectVersionsByObjectID, objectID)
 	return err
 }
 
@@ -40,6 +51,28 @@ type InsertObjectMetadataParams struct {
 
 func (q *Queries) InsertObjectMetadata(ctx context.Context, arg InsertObjectMetadataParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, insertObjectMetadata, arg.Name, arg.BucketID, arg.LocationGroupID)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const insertObjectVersion = `-- name: InsertObjectVersion :one
+INSERT INTO object_version (
+   update_time,
+   object_id
+) VALUES (
+  $1, $2
+)
+RETURNING id
+`
+
+type InsertObjectVersionParams struct {
+	UpdateTime time.Time
+	ObjectID   int64
+}
+
+func (q *Queries) InsertObjectVersion(ctx context.Context, arg InsertObjectVersionParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, insertObjectVersion, arg.UpdateTime, arg.ObjectID)
 	var id int64
 	err := row.Scan(&id)
 	return id, err

@@ -24,6 +24,19 @@ SELECT * FROM object_metadata
 WHERE id >= $1 AND bucket_id = $2
 LIMIT $3;
 
+-- name: InsertObjectVersion :one
+INSERT INTO object_version (
+   update_time,
+   object_id
+) VALUES (
+  $1, $2
+)
+RETURNING id;
+
+-- name: DeleteObjectVersionsByObjectID :exec
+DELETE FROM object_version
+WHERE object_id = $1;
+
 -- name: SelectLocationGroupsByECConfigID :many
 SELECT * from location_group
 WHERE ec_config_id = $1;

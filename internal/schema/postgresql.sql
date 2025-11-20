@@ -38,6 +38,13 @@ CREATE TABLE object_metadata(
     FOREIGN KEY (location_group_id) REFERENCES location_group(id)
 );
 
+CREATE TABLE object_version(
+    id BIGSERIAL PRIMARY KEY,
+    update_time TIMESTAMP NOT NULL,
+    object_id BIGINT NOT NULL,
+    FOREIGN KEY (object_id) REFERENCES object_metadata(id)
+);
+
 CREATE TABLE job(
     id BIGSERIAL PRIMARY KEY,
     kind VARCHAR(128) NOT NULL,
