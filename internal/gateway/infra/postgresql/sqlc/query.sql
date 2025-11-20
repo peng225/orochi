@@ -1,7 +1,7 @@
 -- name: SelectDatastores :many
 SELECT * FROM datastore;
 
--- name: CreateObjectMetadata :one
+-- name: InsertObjectMetadata :one
 INSERT INTO object_metadata (
    name,
    bucket_id,

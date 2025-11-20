@@ -31,7 +31,7 @@ func (omr *ObjectMetadataRepository) CreateObjectMetadata(
 	if tx != nil {
 		q = omr.q.WithTx(tx)
 	}
-	id, err := q.CreateObjectMetadata(ctx, query.CreateObjectMetadataParams{
+	id, err := q.InsertObjectMetadata(ctx, query.InsertObjectMetadataParams{
 		Name:            req.Name,
 		BucketID:        req.BucketID,
 		LocationGroupID: req.LocationGroupID,

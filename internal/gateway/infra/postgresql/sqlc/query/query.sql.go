@@ -11,7 +11,17 @@ import (
 	"github.com/lib/pq"
 )
 
-const createObjectMetadata = `-- name: CreateObjectMetadata :one
+const deleteObjectMetadata = `-- name: DeleteObjectMetadata :exec
+DELETE FROM object_metadata
+WHERE id = $1
+`
+
+func (q *Queries) DeleteObjectMetadata(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteObjectMetadata, id)
+	return err
+}
+
+const insertObjectMetadata = `-- name: InsertObjectMetadata :one
 INSERT INTO object_metadata (
    name,
    bucket_id,
@@ -22,27 +32,17 @@ INSERT INTO object_metadata (
 RETURNING id
 `
 
-type CreateObjectMetadataParams struct {
+type InsertObjectMetadataParams struct {
 	Name            string
 	BucketID        int64
 	LocationGroupID int64
 }
 
-func (q *Queries) CreateObjectMetadata(ctx context.Context, arg CreateObjectMetadataParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, createObjectMetadata, arg.Name, arg.BucketID, arg.LocationGroupID)
+func (q *Queries) InsertObjectMetadata(ctx context.Context, arg InsertObjectMetadataParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, insertObjectMetadata, arg.Name, arg.BucketID, arg.LocationGroupID)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
-}
-
-const deleteObjectMetadata = `-- name: DeleteObjectMetadata :exec
-DELETE FROM object_metadata
-WHERE id = $1
-`
-
-func (q *Queries) DeleteObjectMetadata(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, deleteObjectMetadata, id)
-	return err
 }
 
 const selectBucketByName = `-- name: SelectBucketByName :one
