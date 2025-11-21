@@ -23,6 +23,7 @@ func (oh *ObjectHandler) CreateObject(w http.ResponseWriter, r *http.Request, ob
 	defer r.Body.Close()
 	err := oh.os.CreateObject(string(object), r.Body)
 	if err != nil {
+		slog.Error("CreateObject failed.", "err", err)
 		switch {
 		case errors.Is(err, service.ErrInvalidParameter):
 			w.WriteHeader(http.StatusBadRequest)
@@ -41,10 +42,12 @@ func (oh *ObjectHandler) GetObject(w http.ResponseWriter, r *http.Request, objec
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrInvalidParameter):
+			slog.Error("GetObject failed.", "err", err)
 			w.WriteHeader(http.StatusBadRequest)
 		case errors.Is(err, service.ErrObjectNotFound):
 			w.WriteHeader(http.StatusNotFound)
 		default:
+			slog.Error("GetObject failed.", "err", err)
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 		return
@@ -60,6 +63,7 @@ func (oh *ObjectHandler) GetObject(w http.ResponseWriter, r *http.Request, objec
 func (oh *ObjectHandler) DeleteObject(w http.ResponseWriter, r *http.Request, object server.Object) {
 	err := oh.os.DeleteObject(string(object))
 	if err != nil {
+		slog.Error("DeleteObject failed.", "err", err)
 		switch {
 		case errors.Is(err, service.ErrInvalidParameter):
 			w.WriteHeader(http.StatusBadRequest)
