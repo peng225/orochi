@@ -29,13 +29,22 @@ CREATE TABLE bucket(
     FOREIGN KEY (ec_config_id) REFERENCES ec_config(id)
 );
 
+CREATE TYPE object_status AS ENUM ('creating', 'active');
 CREATE TABLE object_metadata(
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(128) NOT NULL,
+    status object_status NOT NULL,
     bucket_id BIGINT NOT NULL,
     location_group_id BIGINT NOT NULL,
     FOREIGN KEY (bucket_id) REFERENCES bucket(id),
     FOREIGN KEY (location_group_id) REFERENCES location_group(id)
+);
+
+CREATE TABLE object_version(
+    id BIGSERIAL PRIMARY KEY,
+    update_time TIMESTAMP NOT NULL,
+    object_id BIGINT NOT NULL,
+    FOREIGN KEY (object_id) REFERENCES object_metadata(id)
 );
 
 CREATE TABLE job(

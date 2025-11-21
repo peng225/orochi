@@ -1,19 +1,25 @@
 -- name: SelectDatastores :many
 SELECT * FROM datastore;
 
--- name: CreateObjectMetadata :one
+-- name: InsertObjectMetadata :one
 INSERT INTO object_metadata (
    name,
+   status,
    bucket_id,
    location_group_id
 ) VALUES (
-  $1, $2, $3
+  $1, 'creating', $2, $3
 )
 RETURNING id;
 
 -- name: SelectObjectMetadataByName :many
 SELECT * FROM object_metadata
 WHERE name = $1 AND bucket_id = $2;
+
+-- name: UpdateObjectMetadataStatus :exec
+UPDATE object_metadata
+SET status = $1
+WHERE id = $2;
 
 -- name: DeleteObjectMetadata :exec
 DELETE FROM object_metadata
@@ -23,6 +29,19 @@ WHERE id = $1;
 SELECT * FROM object_metadata
 WHERE id >= $1 AND bucket_id = $2
 LIMIT $3;
+
+-- name: InsertObjectVersion :one
+INSERT INTO object_version (
+   update_time,
+   object_id
+) VALUES (
+  $1, $2
+)
+RETURNING id;
+
+-- name: DeleteObjectVersionsByObjectID :exec
+DELETE FROM object_version
+WHERE object_id = $1;
 
 -- name: SelectLocationGroupsByECConfigID :many
 SELECT * from location_group

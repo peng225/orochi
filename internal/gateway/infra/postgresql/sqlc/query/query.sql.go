@@ -7,33 +7,10 @@ package query
 
 import (
 	"context"
+	"time"
 
 	"github.com/lib/pq"
 )
-
-const createObjectMetadata = `-- name: CreateObjectMetadata :one
-INSERT INTO object_metadata (
-   name,
-   bucket_id,
-   location_group_id
-) VALUES (
-  $1, $2, $3
-)
-RETURNING id
-`
-
-type CreateObjectMetadataParams struct {
-	Name            string
-	BucketID        int64
-	LocationGroupID int64
-}
-
-func (q *Queries) CreateObjectMetadata(ctx context.Context, arg CreateObjectMetadataParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, createObjectMetadata, arg.Name, arg.BucketID, arg.LocationGroupID)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
-}
 
 const deleteObjectMetadata = `-- name: DeleteObjectMetadata :exec
 DELETE FROM object_metadata
@@ -43,6 +20,63 @@ WHERE id = $1
 func (q *Queries) DeleteObjectMetadata(ctx context.Context, id int64) error {
 	_, err := q.db.ExecContext(ctx, deleteObjectMetadata, id)
 	return err
+}
+
+const deleteObjectVersionsByObjectID = `-- name: DeleteObjectVersionsByObjectID :exec
+DELETE FROM object_version
+WHERE object_id = $1
+`
+
+func (q *Queries) DeleteObjectVersionsByObjectID(ctx context.Context, objectID int64) error {
+	_, err := q.db.ExecContext(ctx, deleteObjectVersionsByObjectID, objectID)
+	return err
+}
+
+const insertObjectMetadata = `-- name: InsertObjectMetadata :one
+INSERT INTO object_metadata (
+   name,
+   status,
+   bucket_id,
+   location_group_id
+) VALUES (
+  $1, 'creating', $2, $3
+)
+RETURNING id
+`
+
+type InsertObjectMetadataParams struct {
+	Name            string
+	BucketID        int64
+	LocationGroupID int64
+}
+
+func (q *Queries) InsertObjectMetadata(ctx context.Context, arg InsertObjectMetadataParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, insertObjectMetadata, arg.Name, arg.BucketID, arg.LocationGroupID)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const insertObjectVersion = `-- name: InsertObjectVersion :one
+INSERT INTO object_version (
+   update_time,
+   object_id
+) VALUES (
+  $1, $2
+)
+RETURNING id
+`
+
+type InsertObjectVersionParams struct {
+	UpdateTime time.Time
+	ObjectID   int64
+}
+
+func (q *Queries) InsertObjectVersion(ctx context.Context, arg InsertObjectVersionParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, insertObjectVersion, arg.UpdateTime, arg.ObjectID)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }
 
 const selectBucketByName = `-- name: SelectBucketByName :one
@@ -152,7 +186,7 @@ func (q *Queries) SelectLocationGroupsByECConfigID(ctx context.Context, ecConfig
 }
 
 const selectObjectMetadataByName = `-- name: SelectObjectMetadataByName :many
-SELECT id, name, bucket_id, location_group_id FROM object_metadata
+SELECT id, name, status, bucket_id, location_group_id FROM object_metadata
 WHERE name = $1 AND bucket_id = $2
 `
 
@@ -173,6 +207,7 @@ func (q *Queries) SelectObjectMetadataByName(ctx context.Context, arg SelectObje
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.Status,
 			&i.BucketID,
 			&i.LocationGroupID,
 		); err != nil {
@@ -190,7 +225,7 @@ func (q *Queries) SelectObjectMetadataByName(ctx context.Context, arg SelectObje
 }
 
 const selectObjectMetadatas = `-- name: SelectObjectMetadatas :many
-SELECT id, name, bucket_id, location_group_id FROM object_metadata
+SELECT id, name, status, bucket_id, location_group_id FROM object_metadata
 WHERE id >= $1 AND bucket_id = $2
 LIMIT $3
 `
@@ -213,6 +248,7 @@ func (q *Queries) SelectObjectMetadatas(ctx context.Context, arg SelectObjectMet
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.Status,
 			&i.BucketID,
 			&i.LocationGroupID,
 		); err != nil {
@@ -227,4 +263,20 @@ func (q *Queries) SelectObjectMetadatas(ctx context.Context, arg SelectObjectMet
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateObjectMetadataStatus = `-- name: UpdateObjectMetadataStatus :exec
+UPDATE object_metadata
+SET status = $1
+WHERE id = $2
+`
+
+type UpdateObjectMetadataStatusParams struct {
+	Status ObjectStatus
+	ID     int64
+}
+
+func (q *Queries) UpdateObjectMetadataStatus(ctx context.Context, arg UpdateObjectMetadataStatusParams) error {
+	_, err := q.db.ExecContext(ctx, updateObjectMetadataStatus, arg.Status, arg.ID)
+	return err
 }

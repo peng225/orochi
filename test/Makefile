@@ -17,6 +17,7 @@ test-io-only:
 
 data/datastore%:
 	mkdir -p $@
+	chmod 777 $@
 
 .PHONY: prepare
 prepare: $(DATASTORES)

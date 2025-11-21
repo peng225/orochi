@@ -8,6 +8,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"time"
 )
 
 type BucketStatus string
@@ -94,6 +95,48 @@ func (ns NullDatastoreStatus) Value() (driver.Value, error) {
 	return string(ns.DatastoreStatus), nil
 }
 
+type ObjectStatus string
+
+const (
+	ObjectStatusCreating ObjectStatus = "creating"
+	ObjectStatusActive   ObjectStatus = "active"
+)
+
+func (e *ObjectStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ObjectStatus(s)
+	case string:
+		*e = ObjectStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ObjectStatus: %T", src)
+	}
+	return nil
+}
+
+type NullObjectStatus struct {
+	ObjectStatus ObjectStatus
+	Valid        bool // Valid is true if ObjectStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullObjectStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.ObjectStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ObjectStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullObjectStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ObjectStatus), nil
+}
+
 type Bucket struct {
 	ID         int64
 	Name       string
@@ -129,6 +172,13 @@ type LocationGroup struct {
 type ObjectMetadatum struct {
 	ID              int64
 	Name            string
+	Status          ObjectStatus
 	BucketID        int64
 	LocationGroupID int64
+}
+
+type ObjectVersion struct {
+	ID         int64
+	UpdateTime time.Time
+	ObjectID   int64
 }
