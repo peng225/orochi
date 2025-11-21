@@ -33,6 +33,7 @@ type ObjectService struct {
 	dscFactory DatastoreClientFactory
 	dsRepo     DatastoreRepository
 	omRepo     ObjectMetadataRepository
+	ovRepo     ObjectVersionRepository
 	bucketRepo BucketRepository
 	lgRepo     LocationGroupRepository
 	eccRepo    ECConfigRepository
@@ -44,6 +45,7 @@ func NewObjectStore(
 	dscFactory DatastoreClientFactory,
 	dsRepo DatastoreRepository,
 	omRepo ObjectMetadataRepository,
+	ovRepo ObjectVersionRepository,
 	bucketRepo BucketRepository,
 	lgRepo LocationGroupRepository,
 	eccRepo ECConfigRepository,
@@ -57,6 +59,7 @@ func NewObjectStore(
 		dscFactory: dscFactory,
 		dsRepo:     dsRepo,
 		omRepo:     omRepo,
+		ovRepo:     ovRepo,
 		bucketRepo: bucketRepo,
 		lgRepo:     lgRepo,
 		eccRepo:    eccRepo,
@@ -80,6 +83,7 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucketName st
 		return errors.Join(fmt.Errorf("invalid object name: %s", name), ErrInvalidParameter)
 	}
 
+	var bucketID int64
 	err := osvc.tx.Do(ctx, func(ctx context.Context) error {
 		bucket, err := osvc.bucketRepo.GetBucketByName(ctx, bucketName)
 		if err != nil {
@@ -91,7 +95,8 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucketName st
 		if bucket.Status != entity.BucketStatusActive {
 			return fmt.Errorf("unexpected bucket status: %s", bucket.Status)
 		}
-		om, err := osvc.omRepo.GetObjectMetadataByName(ctx, name, bucket.ID)
+		bucketID = bucket.ID
+		_, err = osvc.omRepo.GetObjectMetadataByName(ctx, name, bucket.ID)
 		if err != nil {
 			if !errors.Is(err, ErrNotFound) {
 				return fmt.Errorf("failed to get object metadata by name: %w", err)
@@ -100,11 +105,19 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucketName st
 			if err != nil {
 				return fmt.Errorf("failed to create object metadata: %w", err)
 			}
-			om, err = osvc.omRepo.GetObjectMetadataByName(ctx, name, bucket.ID)
-			if err != nil {
-				return fmt.Errorf("failed to get object metadata: %w", err)
-			}
 		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("transaction failed: %w", err)
+	}
+
+	err = osvc.tx.Do(ctx, func(ctx context.Context) error {
+		om, err := osvc.omRepo.GetObjectMetadataByName(ctx, name, bucketID)
+		if err != nil {
+			return fmt.Errorf("failed to get object metadata: %w", err)
+		}
+
 		lg, err := osvc.lgRepo.GetLocationGroup(ctx, om.LocationGroupID)
 		if err != nil {
 			return fmt.Errorf("failed to get location group: %w", err)
@@ -139,6 +152,10 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucketName st
 				}
 				break
 			}
+		}
+		_, err = osvc.ovRepo.CreateObjectVersion(ctx, om.ID)
+		if err != nil {
+			return fmt.Errorf("failed to create object version: %w", err)
 		}
 		eg := new(errgroup.Group)
 		var errorCount atomic.Int32
@@ -311,6 +328,10 @@ func (osvc *ObjectService) DeleteObject(ctx context.Context, name, bucketName st
 			return fmt.Errorf("failed to delete object chunk: %w", err)
 		}
 
+		err = osvc.ovRepo.DeleteObjectVersionsByObjectID(ctx, om.ID)
+		if err != nil {
+			return fmt.Errorf("failed to delete object versions by object ID: %w", err)
+		}
 		err = osvc.omRepo.DeleteObjectMetadata(ctx, om.ID)
 		if err != nil {
 			return fmt.Errorf("failed to delete object metadata: %w", err)

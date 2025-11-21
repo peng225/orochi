@@ -49,6 +49,11 @@ type ObjectMetadataRepository interface {
 	DeleteObjectMetadata(ctx context.Context, id int64) error
 }
 
+type ObjectVersionRepository interface {
+	CreateObjectVersion(ctx context.Context, objectID int64) (int64, error)
+	DeleteObjectVersionsByObjectID(ctx context.Context, objectID int64) error
+}
+
 type BucketRepository interface {
 	GetBucketByName(ctx context.Context, name string) (*entity.Bucket, error)
 }
