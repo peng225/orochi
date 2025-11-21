@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	gwclient "github.com/peng225/orochi/internal/gateway/api/client"
 	"github.com/stretchr/testify/require"
@@ -34,10 +35,12 @@ func TestObject_CreateAndGet(t *testing.T) {
 		t.Run(tc.ecConfig, func(t *testing.T) {
 			bucket := prepareBucket(t, tc.ecConfig)
 			object := "test-object"
-			createRes, err := c.CreateObjectWithBody(t.Context(), bucket, object,
-				"application/octet-stream", strings.NewReader("test-data"))
-			require.NoError(t, err)
-			require.Equal(t, http.StatusCreated, createRes.StatusCode)
+			require.Eventually(t, func() bool {
+				createRes, err := c.CreateObjectWithBody(t.Context(), bucket, object,
+					"application/octet-stream", strings.NewReader("test-data"))
+				require.NoError(t, err)
+				return http.StatusCreated == createRes.StatusCode
+			}, 10*time.Second, 1*time.Second)
 
 			getRes, err := c.GetObject(t.Context(), bucket, object)
 			require.NoError(t, err)

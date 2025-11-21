@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"sync"
 	"sync/atomic"
 
 	"github.com/peng225/orochi/internal/entity"
@@ -29,8 +30,10 @@ var (
 
 type ObjectService struct {
 	tx         Transaction
+	mu         sync.RWMutex
 	dsClients  map[int64]DatastoreClient
 	dscFactory DatastoreClientFactory
+	dsStatus   map[int64]entity.DatastoreStatus
 	dsRepo     DatastoreRepository
 	omRepo     ObjectMetadataRepository
 	ovRepo     ObjectVersionRepository
@@ -41,7 +44,6 @@ type ObjectService struct {
 
 func NewObjectStore(
 	tx Transaction,
-	dsClients map[int64]DatastoreClient,
 	dscFactory DatastoreClientFactory,
 	dsRepo DatastoreRepository,
 	omRepo ObjectMetadataRepository,
@@ -50,13 +52,13 @@ func NewObjectStore(
 	lgRepo LocationGroupRepository,
 	eccRepo ECConfigRepository,
 ) *ObjectService {
-	if dsClients == nil {
-		dsClients = make(map[int64]DatastoreClient)
-	}
+	dsClients := make(map[int64]DatastoreClient)
+	dsStatus := make(map[int64]entity.DatastoreStatus)
 	return &ObjectService{
 		tx:         tx,
 		dsClients:  dsClients,
 		dscFactory: dscFactory,
+		dsStatus:   dsStatus,
 		dsRepo:     dsRepo,
 		omRepo:     omRepo,
 		ovRepo:     ovRepo,
@@ -71,8 +73,11 @@ func (osvc *ObjectService) Refresh(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to get datastores: %w", err)
 	}
+	osvc.mu.Lock()
+	defer osvc.mu.Unlock()
 	for _, ds := range dss {
 		osvc.dsClients[ds.ID] = osvc.dscFactory.New(ds)
+		osvc.dsStatus[ds.ID] = ds.Status
 	}
 	return nil
 }
@@ -145,7 +150,7 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucketName st
 				len(lg.CurrentDatastores), len(codes))
 		}
 		for _, ds := range lg.CurrentDatastores {
-			if _, ok := osvc.dsClients[ds]; !ok {
+			if osvc.dsClientNotFound(ds) {
 				err := osvc.Refresh(ctx)
 				if err != nil {
 					return fmt.Errorf("failed to refresh: %w", err)
@@ -158,19 +163,25 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucketName st
 			return fmt.Errorf("failed to create object version: %w", err)
 		}
 		eg := new(errgroup.Group)
-		var errorCount atomic.Int32
+		var downCount atomic.Int32
 		for i, ds := range lg.CurrentDatastores {
 			eg.Go(func() error {
+				osvc.mu.RLock()
+				defer osvc.mu.RUnlock()
+				if osvc.dsStatus[ds] == entity.DatastoreStatusDown {
+					// FIXME: record the operation log.
+					downCount.Add(1)
+					return nil
+				}
 				err = osvc.dsClients[ds].CreateObject(ctx, filepath.Join(bucketName, name), bytes.NewBuffer(codes[i]))
 				if err != nil {
-					errorCount.Add(1)
 					return fmt.Errorf("CreateObject failed: %w", err)
 				}
 				return nil
 			})
 		}
 		// FIXME: It is dangerous to accept PUT when numParity datastores are down.
-		if err := eg.Wait(); err != nil && errorCount.Load() > int32(ecConfig.NumParity) {
+		if err := eg.Wait(); err != nil || downCount.Load() > int32(ecConfig.NumParity) {
 			return fmt.Errorf("failed to create object chunk: %w", err)
 		}
 
@@ -184,6 +195,13 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucketName st
 		return fmt.Errorf("transaction failed: %w", err)
 	}
 	return nil
+}
+
+func (osvc *ObjectService) dsClientNotFound(dsID int64) bool {
+	osvc.mu.RLock()
+	defer osvc.mu.RUnlock()
+	_, ok := osvc.dsClients[dsID]
+	return !ok
 }
 
 func (osvc *ObjectService) GetObject(ctx context.Context, name, bucketName string) ([]byte, error) {
@@ -225,6 +243,8 @@ func (osvc *ObjectService) GetObject(ctx context.Context, name, bucketName strin
 	codes := make([][]byte, ecConfig.NumData+ecConfig.NumParity)
 	for i, ds := range lg.CurrentDatastores {
 		eg.Go(func() error {
+			osvc.mu.RLock()
+			defer osvc.mu.RUnlock()
 			rc, err := osvc.dsClients[ds].GetObject(ctx, filepath.Join(bucketName, name))
 			if err != nil {
 				errorCount.Add(1)
@@ -309,22 +329,22 @@ func (osvc *ObjectService) DeleteObject(ctx context.Context, name, bucketName st
 		}
 
 		eg := new(errgroup.Group)
-		var errorCount atomic.Int32
 		for _, ds := range lg.CurrentDatastores {
 			eg.Go(func() error {
+				osvc.mu.RLock()
+				defer osvc.mu.RUnlock()
+				if osvc.dsStatus[ds] == entity.DatastoreStatusDown {
+					// FIXME: record the operation log.
+					return nil
+				}
 				err = osvc.dsClients[ds].DeleteObject(ctx, filepath.Join(bucketName, name))
 				if err != nil {
-					errorCount.Add(1)
 					return fmt.Errorf("DeleteObject failed: %w", err)
 				}
 				return nil
 			})
 		}
-		// Even if deletes fail for all datastores, logging this fact
-		// allows for recovery later. However, to avoid failing
-		// to notice if a bug causes deletes to never succeed at all,
-		// we require that deletes succeed for at least one datastore.
-		if err := eg.Wait(); err != nil && errorCount.Load() == int32(len(lg.CurrentDatastores)) {
+		if err := eg.Wait(); err != nil {
 			return fmt.Errorf("failed to delete object chunk: %w", err)
 		}
 

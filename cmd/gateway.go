@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"context"
 	"log/slog"
 	"net"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/peng225/orochi/internal/gateway/api/server"
 	"github.com/peng225/orochi/internal/gateway/handler"
@@ -51,9 +53,10 @@ to quickly create a Cobra application.`,
 		lgRepo := postgresql.NewLocationGroupRepository(db)
 		eccRepo := postgresql.NewECConfigRepository(db)
 		objService := service.NewObjectStore(
-			tx, nil, datastore.NewClientFactory(),
-			dsRepo, omRepo, ovRepo, bucketRepo, lgRepo, eccRepo,
+			tx, datastore.NewClientFactory(), dsRepo,
+			omRepo, ovRepo, bucketRepo, lgRepo, eccRepo,
 		)
+		go periodic(cmd.Context(), objService)
 		objHandler := handler.NewObjectHandler(objService)
 		h := server.Handler(objHandler)
 		err = http.ListenAndServe(net.JoinHostPort("", port), h)
@@ -78,4 +81,24 @@ func init() {
 	// gatewayCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	gatewayCmd.Flags().StringP("port", "p", "8081", "Port number")
 	setLogLevelFlag(gatewayCmd)
+}
+
+func periodic(ctx context.Context, objService *service.ObjectService) {
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	slog.Info("Periodic process started.")
+
+	for {
+		select {
+		case <-ctx.Done():
+			slog.Info("Process stopped.")
+			return
+		case <-ticker.C:
+			err := objService.Refresh(ctx)
+			if err != nil {
+				slog.Error("ObjectService::Refresh failed.", "err", err)
+			}
+		}
+	}
 }
