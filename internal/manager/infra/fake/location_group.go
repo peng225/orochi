@@ -29,26 +29,25 @@ func (lgr *FakeLocationGroupRepository) CreateLocationGroup(
 	defer lgr.mu.Unlock()
 	id := lgr.nextID
 	lgr.locationGroups[lgr.nextID] = &entity.LocationGroup{
-		ID:                id,
-		CurrentDatastores: req.Datastores,
-		DesiredDatastores: req.Datastores,
-		ECConfigID:        req.ECConfigID,
+		ID:         id,
+		Datastores: req.Datastores,
+		ECConfigID: req.ECConfigID,
 	}
 	lgr.nextID++
 	return id, nil
 }
 
-func (lgr *FakeLocationGroupRepository) UpdateDesiredDatastores(
+func (lgr *FakeLocationGroupRepository) UpdateLocationGroupStatus(
 	ctx context.Context,
 	id int64,
-	desiredDatastores []int64,
+	status entity.LocationGroupStatus,
 ) error {
 	lgr.mu.Lock()
 	defer lgr.mu.Unlock()
 	if _, ok := lgr.locationGroups[id]; !ok {
 		return service.ErrNotFound
 	}
-	lgr.locationGroups[id].DesiredDatastores = desiredDatastores
+	lgr.locationGroups[id].Status = status
 	return nil
 }
 

@@ -11,7 +11,6 @@ import (
 	randv2 "math/rand/v2"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"sync"
 	"sync/atomic"
 
@@ -127,10 +126,6 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucketName st
 		if err != nil {
 			return fmt.Errorf("failed to get location group: %w", err)
 		}
-		if !slices.Equal(lg.CurrentDatastores, lg.DesiredDatastores) {
-			// FIXME: double write.
-			return fmt.Errorf("unsupported behavior")
-		}
 		data, err := io.ReadAll(r)
 		if err != nil {
 			return fmt.Errorf("failed to read data: %w", err)
@@ -145,11 +140,11 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucketName st
 		if err != nil {
 			return fmt.Errorf("failed to encode: %w", err)
 		}
-		if len(codes) != len(lg.CurrentDatastores) {
+		if len(codes) != len(lg.Datastores) {
 			return fmt.Errorf("unexpected code length: expected=%d, actual=%d",
-				len(lg.CurrentDatastores), len(codes))
+				len(lg.Datastores), len(codes))
 		}
-		for _, ds := range lg.CurrentDatastores {
+		for _, ds := range lg.Datastores {
 			if osvc.dsClientNotFound(ds) {
 				err := osvc.Refresh(ctx)
 				if err != nil {
@@ -164,7 +159,7 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucketName st
 		}
 		eg := new(errgroup.Group)
 		var downCount atomic.Int32
-		for i, ds := range lg.CurrentDatastores {
+		for i, ds := range lg.Datastores {
 			eg.Go(func() error {
 				osvc.mu.RLock()
 				defer osvc.mu.RUnlock()
@@ -241,7 +236,7 @@ func (osvc *ObjectService) GetObject(ctx context.Context, name, bucketName strin
 	eg := new(errgroup.Group)
 	var errorCount atomic.Int32
 	codes := make([][]byte, ecConfig.NumData+ecConfig.NumParity)
-	for i, ds := range lg.CurrentDatastores {
+	for i, ds := range lg.Datastores {
 		eg.Go(func() error {
 			osvc.mu.RLock()
 			defer osvc.mu.RUnlock()
@@ -323,13 +318,9 @@ func (osvc *ObjectService) DeleteObject(ctx context.Context, name, bucketName st
 		if err != nil {
 			return fmt.Errorf("failed to get location group: %w", err)
 		}
-		if !slices.Equal(lg.CurrentDatastores, lg.DesiredDatastores) {
-			// FIXME: double delete.
-			return fmt.Errorf("unsupported behavior")
-		}
 
 		eg := new(errgroup.Group)
-		for _, ds := range lg.CurrentDatastores {
+		for _, ds := range lg.Datastores {
 			eg.Go(func() error {
 				osvc.mu.RLock()
 				defer osvc.mu.RUnlock()

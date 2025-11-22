@@ -15,17 +15,17 @@ SELECT id FROM datastore;
 
 -- name: InsertLocationGroup :one
 INSERT INTO location_group (
-   current_datastores,
-   desired_datastores,
-   ec_config_id
+   datastores,
+   ec_config_id,
+   status
 ) VALUES (
-  $1, $2, $3
+  $1, $2, 'active'
 )
 RETURNING id;
 
--- name: UpdateDesiredDatastores :exec
+-- name: UpdateLocationGroupStatus :exec
 UPDATE location_group
-SET desired_datastores = $1
+SET status = $1
 WHERE id = $2;
 
 -- name: SelectLocationGroupsByECConfigID :many

@@ -95,6 +95,48 @@ func (ns NullDatastoreStatus) Value() (driver.Value, error) {
 	return string(ns.DatastoreStatus), nil
 }
 
+type LocationGroupStatus string
+
+const (
+	LocationGroupStatusActive   LocationGroupStatus = "active"
+	LocationGroupStatusDeleting LocationGroupStatus = "deleting"
+)
+
+func (e *LocationGroupStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = LocationGroupStatus(s)
+	case string:
+		*e = LocationGroupStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for LocationGroupStatus: %T", src)
+	}
+	return nil
+}
+
+type NullLocationGroupStatus struct {
+	LocationGroupStatus LocationGroupStatus
+	Valid               bool // Valid is true if LocationGroupStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullLocationGroupStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.LocationGroupStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.LocationGroupStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullLocationGroupStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.LocationGroupStatus), nil
+}
+
 type ObjectStatus string
 
 const (
@@ -163,10 +205,10 @@ type Job struct {
 }
 
 type LocationGroup struct {
-	ID                int64
-	CurrentDatastores []int64
-	DesiredDatastores []int64
-	EcConfigID        int64
+	ID         int64
+	Datastores []int64
+	EcConfigID int64
+	Status     LocationGroupStatus
 }
 
 type ObjectMetadatum struct {

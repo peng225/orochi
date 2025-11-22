@@ -9,25 +9,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestExpandLocationGroup(t *testing.T) {
+func TestReconstructLocationGroups(t *testing.T) {
 	testCases := []struct {
-		name               string
-		numDSs             int
-		ecConfigStr        string
-		existingLGs        []*service.CreateLocationGroupRequest
-		expectedDesiredDSs [][]int64
+		name        string
+		numDSs      int
+		ecConfigStr string
+		existingLGs []*service.CreateLocationGroupRequest
+		expectedDSs [][]int64
 	}{
 		{
-			name:               "no datastores",
-			numDSs:             0,
-			ecConfigStr:        "2D1P",
-			expectedDesiredDSs: [][]int64{},
+			name:        "no datastores",
+			numDSs:      0,
+			ecConfigStr: "2D1P",
+			expectedDSs: [][]int64{},
 		},
 		{
 			name:        "small number of datastores without existing LGs",
 			numDSs:      3,
 			ecConfigStr: "2D1P",
-			expectedDesiredDSs: [][]int64{
+			expectedDSs: [][]int64{
 				{1, 2, 3}, {1, 3, 2}, {2, 1, 3},
 				{2, 3, 1}, {3, 1, 2}, {3, 2, 1},
 			},
@@ -42,7 +42,7 @@ func TestExpandLocationGroup(t *testing.T) {
 					ECConfigID: 1,
 				},
 			},
-			expectedDesiredDSs: [][]int64{
+			expectedDSs: [][]int64{
 				{1, 2, 3}, {1, 3, 2}, {2, 1, 3},
 				{2, 3, 1}, {3, 1, 2}, {3, 2, 1},
 			},
@@ -77,7 +77,7 @@ func TestExpandLocationGroup(t *testing.T) {
 			lgs, err := lgRepo.GetLocationGroupsByECConfigID(t.Context(), ecConfig.ID)
 			require.NoError(t, err)
 			for _, lg := range lgs {
-				require.Contains(t, tc.expectedDesiredDSs, lg.DesiredDatastores)
+				require.Contains(t, tc.expectedDSs, lg.Datastores)
 			}
 		})
 	}

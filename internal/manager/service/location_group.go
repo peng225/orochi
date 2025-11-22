@@ -79,10 +79,10 @@ func (lgs *LocationGroupService) ReconstructLocationGroups(ctx context.Context, 
 			return fmt.Errorf("failed to shrink location group: %w", err)
 		}
 	} else {
-		newDesiredDatastores := generateNewDesiredDSs(dsIDs, stripeWidth, targetNumPerDatastore*len(dsIDs))
+		newDatastores := generateNewDSs(dsIDs, stripeWidth, targetNumPerDatastore*len(dsIDs))
 		// FIXME: should I create a location group for EC configs that have the same stripe width,
 		//        not per EC config?
-		err := lgs.expandLocationGroup(ctx, locationGroups, newDesiredDatastores, ecConfig.ID)
+		err := lgs.expandLocationGroup(ctx, locationGroups, newDatastores, ecConfig.ID)
 		if err != nil {
 			return fmt.Errorf("failed to expand location group: %w", err)
 		}
@@ -98,37 +98,36 @@ func (lgs *LocationGroupService) shrinkLocationGroup() error {
 func (lgs *LocationGroupService) expandLocationGroup(
 	ctx context.Context,
 	locationGroups []*entity.LocationGroup,
-	newDesiredDSs [][]int64,
+	newDSs [][]int64,
 	ecConfigID int64,
 ) error {
 	i := 0
 	// Avoid to update location groups that already have
-	// one of the new desired datastores.
+	// one of the new datastores.
 	for j := range len(locationGroups) {
-		for k := range newDesiredDSs[i:] {
-			if slices.Equal(locationGroups[j].DesiredDatastores, newDesiredDSs[k]) {
+		for k := range newDSs[i:] {
+			if slices.Equal(locationGroups[j].Datastores, newDSs[k]) {
 				locationGroups[i], locationGroups[j] = locationGroups[j], locationGroups[i]
-				newDesiredDSs[i], newDesiredDSs[k] = newDesiredDSs[k], newDesiredDSs[i]
+				newDSs[i], newDSs[k] = newDSs[k], newDSs[i]
 				i++
 				break
 			}
 		}
 	}
 
-	for _, lg := range locationGroups[i:] {
-		// FIXME: should move the actual object asynchronously
-		// according to the new desired datastores.
-		err := lgs.lgRepo.UpdateDesiredDatastores(ctx, lg.ID, newDesiredDSs[i])
+	for _, ds := range newDSs[i:] {
+		_, err := lgs.lgRepo.CreateLocationGroup(ctx, &CreateLocationGroupRequest{
+			Datastores: ds,
+			ECConfigID: ecConfigID,
+		})
 		if err != nil {
 			return err
 		}
-		i++
 	}
-	for _, desiredDs := range newDesiredDSs[i:] {
-		_, err := lgs.lgRepo.CreateLocationGroup(ctx, &CreateLocationGroupRequest{
-			Datastores: desiredDs,
-			ECConfigID: ecConfigID,
-		})
+	for _, lg := range locationGroups[i:] {
+		// FIXME: should move the actual object asynchronously
+		// according to the new datastores.
+		err := lgs.lgRepo.UpdateLocationGroupStatus(ctx, lg.ID, entity.LocationGroupStatusDeleting)
 		if err != nil {
 			return err
 		}
@@ -150,16 +149,16 @@ func permutation(n, k, upperBound int) int {
 	return result
 }
 
-func generateNewDesiredDSs(dsIDs []int64, stripeWidth, targetNum int) [][]int64 {
+func generateNewDSs(dsIDs []int64, stripeWidth, targetNum int) [][]int64 {
 	current := make([]int64, 0, stripeWidth)
 	result := make([][]int64, 0, targetNum)
-	generateNewDesiredDSsHelper(dsIDs, stripeWidth, targetNum, current, &result)
+	generateNewDSsHelper(dsIDs, stripeWidth, targetNum, current, &result)
 	return result
 }
 
 // FIXME: should resolve the unbalance allocations among datastores.
 // Shuffling dsIDs before iteration may resolve the issue.
-func generateNewDesiredDSsHelper(dsIDs []int64, stripeWidth, targetNum int, current []int64, result *[][]int64) {
+func generateNewDSsHelper(dsIDs []int64, stripeWidth, targetNum int, current []int64, result *[][]int64) {
 	if len(*result) == targetNum {
 		return
 	}
@@ -169,7 +168,7 @@ func generateNewDesiredDSsHelper(dsIDs []int64, stripeWidth, targetNum int, curr
 	}
 	for i, dsID := range dsIDs {
 		current = append(current, dsID)
-		generateNewDesiredDSsHelper(append(slices.Clone(dsIDs[0:i]), dsIDs[i+1:]...), stripeWidth, targetNum, current, result)
+		generateNewDSsHelper(append(slices.Clone(dsIDs[0:i]), dsIDs[i+1:]...), stripeWidth, targetNum, current, result)
 		current = current[:len(current)-1]
 	}
 }

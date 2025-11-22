@@ -136,7 +136,7 @@ func (q *Queries) SelectECConfig(ctx context.Context, id int64) (EcConfig, error
 }
 
 const selectLocationGroup = `-- name: SelectLocationGroup :one
-SELECT id, current_datastores, desired_datastores, ec_config_id from location_group
+SELECT id, datastores, ec_config_id, status from location_group
 WHERE id = $1
 `
 
@@ -145,15 +145,15 @@ func (q *Queries) SelectLocationGroup(ctx context.Context, id int64) (LocationGr
 	var i LocationGroup
 	err := row.Scan(
 		&i.ID,
-		pq.Array(&i.CurrentDatastores),
-		pq.Array(&i.DesiredDatastores),
+		pq.Array(&i.Datastores),
 		&i.EcConfigID,
+		&i.Status,
 	)
 	return i, err
 }
 
 const selectLocationGroupsByECConfigID = `-- name: SelectLocationGroupsByECConfigID :many
-SELECT id, current_datastores, desired_datastores, ec_config_id from location_group
+SELECT id, datastores, ec_config_id, status from location_group
 WHERE ec_config_id = $1
 `
 
@@ -168,9 +168,9 @@ func (q *Queries) SelectLocationGroupsByECConfigID(ctx context.Context, ecConfig
 		var i LocationGroup
 		if err := rows.Scan(
 			&i.ID,
-			pq.Array(&i.CurrentDatastores),
-			pq.Array(&i.DesiredDatastores),
+			pq.Array(&i.Datastores),
 			&i.EcConfigID,
+			&i.Status,
 		); err != nil {
 			return nil, err
 		}

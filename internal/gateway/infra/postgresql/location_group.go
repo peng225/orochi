@@ -38,10 +38,10 @@ func (lgr *LocationGroupRepository) GetLocationGroup(
 		return nil, fmt.Errorf("failed to select location group: %w", err)
 	}
 	return &entity.LocationGroup{
-		ID:                lg.ID,
-		CurrentDatastores: lg.CurrentDatastores,
-		DesiredDatastores: lg.DesiredDatastores,
-		ECConfigID:        lg.EcConfigID,
+		ID:         lg.ID,
+		Datastores: lg.Datastores,
+		ECConfigID: lg.EcConfigID,
+		Status:     entity.LocationGroupStatus(lg.Status),
 	}, nil
 }
 
@@ -60,10 +60,10 @@ func (lgr *LocationGroupRepository) GetLocationGroupsByECConfigID(
 	ret := make([]*entity.LocationGroup, 0, len(lgs))
 	for _, lg := range lgs {
 		ret = append(ret, &entity.LocationGroup{
-			ID:                lg.ID,
-			CurrentDatastores: lg.CurrentDatastores,
-			DesiredDatastores: lg.DesiredDatastores,
-			ECConfigID:        lg.EcConfigID,
+			ID:         lg.ID,
+			Datastores: lg.Datastores,
+			ECConfigID: lg.EcConfigID,
+			Status:     entity.LocationGroupStatus(lg.Status),
 		})
 	}
 	return ret, nil
