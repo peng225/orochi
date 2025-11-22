@@ -170,13 +170,23 @@ func (p *Processor) checkDatastoreHealthStatus(ctx context.Context) error {
 			eg.Go(func() error {
 				dsClient := p.dscFactory.New(ds)
 				err := dsClient.CheckHealthStatus(ctx)
-				if err != nil {
+				if err == nil {
+					if ds.Status == entity.DatastoreStatusActive {
+						return nil
+					}
+					err := p.dsRepo.ChangeDatastoreStatus(ctx, ds.ID, entity.DatastoreStatusActive)
+					if err != nil {
+						return fmt.Errorf("failed to update datastore status: %w", err)
+					}
+					slog.Info("Datastore revival detected.", "id", ds.ID)
+				} else {
 					if ds.Status == entity.DatastoreStatusDown {
 						return nil
 					}
 					p.dsDownCount[ds.ID]++
 					if p.dsDownCount[ds.ID] >= 2 {
 						err := p.dsRepo.ChangeDatastoreStatus(ctx, ds.ID, entity.DatastoreStatusDown)
+						p.dsDownCount[ds.ID] = 0
 						if err != nil {
 							return fmt.Errorf("failed to update datastore status: %w", err)
 						}
