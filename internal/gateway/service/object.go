@@ -170,7 +170,7 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucketName st
 				}
 				err = osvc.dsClients[ds].CreateObject(ctx, filepath.Join(bucketName, name), bytes.NewBuffer(codes[i]))
 				if err != nil {
-					return fmt.Errorf("CreateObject failed: %w", err)
+					return fmt.Errorf("CreateObject failed for dsID %d: %w", ds, err)
 				}
 				return nil
 			})
