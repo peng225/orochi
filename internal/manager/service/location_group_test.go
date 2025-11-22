@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestExpandLocationGroup(t *testing.T) {
+func TestReconstructLocationGroups(t *testing.T) {
 	testCases := []struct {
 		name        string
 		numDSs      int
