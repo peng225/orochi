@@ -37,6 +37,7 @@ func (dr *DatastoreRepository) GetDatastores(ctx context.Context) ([]*entity.Dat
 		datastores[i] = &entity.Datastore{
 			ID:      ds.ID,
 			BaseURL: ds.BaseUrl,
+			Status:  entity.DatastoreStatus(ds.Status),
 		}
 	}
 	return datastores, nil
