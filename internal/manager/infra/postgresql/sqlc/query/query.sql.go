@@ -161,6 +161,18 @@ func (q *Queries) SelectDatastore(ctx context.Context, id int64) (Datastore, err
 	return i, err
 }
 
+const selectDatastoreByBaseURL = `-- name: SelectDatastoreByBaseURL :one
+SELECT id, base_url, status FROM datastore
+WHERE base_url = $1
+`
+
+func (q *Queries) SelectDatastoreByBaseURL(ctx context.Context, baseUrl string) (Datastore, error) {
+	row := q.db.QueryRowContext(ctx, selectDatastoreByBaseURL, baseUrl)
+	var i Datastore
+	err := row.Scan(&i.ID, &i.BaseUrl, &i.Status)
+	return i, err
+}
+
 const selectDatastoreIDs = `-- name: SelectDatastoreIDs :many
 SELECT id FROM datastore
 `

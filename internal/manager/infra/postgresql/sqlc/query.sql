@@ -10,6 +10,10 @@ RETURNING id;
 SELECT * FROM datastore
 WHERE id = $1;
 
+-- name: SelectDatastoreByBaseURL :one
+SELECT * FROM datastore
+WHERE base_url = $1;
+
 -- name: SelectDatastoreIDs :many
 SELECT id FROM datastore;
 

@@ -1,7 +1,7 @@
 CREATE TYPE datastore_status AS ENUM ('active', 'down');
 CREATE TABLE datastore(
     id BIGSERIAL PRIMARY KEY,
-    base_url VARCHAR(128) NOT NULL,
+    base_url VARCHAR(128) NOT NULL UNIQUE,
     status datastore_status NOT NULL
 );
 

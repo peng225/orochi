@@ -57,6 +57,28 @@ func (dr *DatastoreRepository) GetDatastore(ctx context.Context, id int64) (*ent
 	}, nil
 }
 
+func (dr *DatastoreRepository) GetDatastoreByBaseURL(
+	ctx context.Context, baseURL string,
+) (*entity.Datastore, error) {
+	tx := psqlutil.TxFromCtx(ctx)
+	q := dr.q
+	if tx != nil {
+		q = dr.q.WithTx(tx)
+	}
+	ds, err := q.SelectDatastoreByBaseURL(ctx, baseURL)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, service.ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to select datastore by base URL: %w", err)
+	}
+	return &entity.Datastore{
+		ID:      ds.ID,
+		BaseURL: ds.BaseUrl,
+		Status:  entity.DatastoreStatus(ds.Status),
+	}, nil
+}
+
 func (dr *DatastoreRepository) GetDatastoreIDs(ctx context.Context) ([]int64, error) {
 	tx := psqlutil.TxFromCtx(ctx)
 	q := dr.q
