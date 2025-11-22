@@ -36,7 +36,7 @@ func TestPermutation(t *testing.T) {
 	}
 }
 
-func TestGenerateNewDesiredDSs(t *testing.T) {
+func TestGenerateNewDSs(t *testing.T) {
 	testCases := []struct {
 		name  string
 		dsIDs []int64
@@ -57,7 +57,7 @@ func TestGenerateNewDesiredDSs(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		result := generateNewDesiredDSs(tc.dsIDs, tc.stripeWidth, tc.targetNum)
+		result := generateNewDSs(tc.dsIDs, tc.stripeWidth, tc.targetNum)
 		assert.Len(t, result, tc.targetNum)
 		for _, r := range result {
 			appeared := make(map[int64]struct{})

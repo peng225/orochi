@@ -27,8 +27,8 @@ type CreateLocationGroupRequest struct {
 
 type LocationGroupRepository interface {
 	CreateLocationGroup(ctx context.Context, req *CreateLocationGroupRequest) (int64, error)
-	UpdateDesiredDatastores(ctx context.Context, id int64, desiredDatastores []int64) error
 	GetLocationGroupsByECConfigID(ctx context.Context, ecConfigID int64) ([]*entity.LocationGroup, error)
+	UpdateLocationGroupStatus(ctx context.Context, id int64, status entity.LocationGroupStatus) error
 }
 
 type CreateBucketRequest struct {

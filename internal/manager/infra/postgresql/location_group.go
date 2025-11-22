@@ -31,9 +31,8 @@ func (lgr *LocationGroupRepository) CreateLocationGroup(
 		q = lgr.q.WithTx(tx)
 	}
 	id, err := q.InsertLocationGroup(ctx, query.InsertLocationGroupParams{
-		CurrentDatastores: req.Datastores,
-		DesiredDatastores: req.Datastores,
-		EcConfigID:        req.ECConfigID,
+		Datastores: req.Datastores,
+		EcConfigID: req.ECConfigID,
 	})
 	if err != nil {
 		return 0, fmt.Errorf("failed to insert location group: %w", err)
@@ -41,22 +40,20 @@ func (lgr *LocationGroupRepository) CreateLocationGroup(
 	return id, nil
 }
 
-func (lgr *LocationGroupRepository) UpdateDesiredDatastores(
-	ctx context.Context,
-	id int64,
-	desiredDatastores []int64,
+func (lgr *LocationGroupRepository) UpdateLocationGroupStatus(
+	ctx context.Context, id int64, status entity.LocationGroupStatus,
 ) error {
 	tx := psqlutil.TxFromCtx(ctx)
 	q := lgr.q
 	if tx != nil {
 		q = lgr.q.WithTx(tx)
 	}
-	err := q.UpdateDesiredDatastores(ctx, query.UpdateDesiredDatastoresParams{
-		ID:                id,
-		DesiredDatastores: desiredDatastores,
+	err := q.UpdateLocationGroupStatus(ctx, query.UpdateLocationGroupStatusParams{
+		ID:     id,
+		Status: query.LocationGroupStatus(status),
 	})
 	if err != nil {
-		return fmt.Errorf("failed to update desired datastores: %w", err)
+		return fmt.Errorf("failed to update location group status: %w", err)
 	}
 	return nil
 }
@@ -77,10 +74,10 @@ func (lgr *LocationGroupRepository) GetLocationGroupsByECConfigID(
 	ret := make([]*entity.LocationGroup, 0, len(lgs))
 	for _, lg := range lgs {
 		ret = append(ret, &entity.LocationGroup{
-			ID:                lg.ID,
-			CurrentDatastores: lg.CurrentDatastores,
-			DesiredDatastores: lg.DesiredDatastores,
-			ECConfigID:        lg.EcConfigID,
+			ID:         lg.ID,
+			Datastores: lg.Datastores,
+			ECConfigID: lg.EcConfigID,
+			Status:     entity.LocationGroupStatus(lg.Status),
 		})
 	}
 	return ret, nil

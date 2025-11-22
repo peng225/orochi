@@ -94,23 +94,22 @@ func (q *Queries) InsertJob(ctx context.Context, arg InsertJobParams) (int64, er
 
 const insertLocationGroup = `-- name: InsertLocationGroup :one
 INSERT INTO location_group (
-   current_datastores,
-   desired_datastores,
-   ec_config_id
+   datastores,
+   ec_config_id,
+   status
 ) VALUES (
-  $1, $2, $3
+  $1, $2, 'active'
 )
 RETURNING id
 `
 
 type InsertLocationGroupParams struct {
-	CurrentDatastores []int64
-	DesiredDatastores []int64
-	EcConfigID        int64
+	Datastores []int64
+	EcConfigID int64
 }
 
 func (q *Queries) InsertLocationGroup(ctx context.Context, arg InsertLocationGroupParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, insertLocationGroup, pq.Array(arg.CurrentDatastores), pq.Array(arg.DesiredDatastores), arg.EcConfigID)
+	row := q.db.QueryRowContext(ctx, insertLocationGroup, pq.Array(arg.Datastores), arg.EcConfigID)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -234,7 +233,7 @@ func (q *Queries) SelectECConfigs(ctx context.Context) ([]EcConfig, error) {
 }
 
 const selectLocationGroupsByECConfigID = `-- name: SelectLocationGroupsByECConfigID :many
-SELECT id, current_datastores, desired_datastores, ec_config_id from location_group
+SELECT id, datastores, ec_config_id, status from location_group
 WHERE ec_config_id = $1
 `
 
@@ -249,9 +248,9 @@ func (q *Queries) SelectLocationGroupsByECConfigID(ctx context.Context, ecConfig
 		var i LocationGroup
 		if err := rows.Scan(
 			&i.ID,
-			pq.Array(&i.CurrentDatastores),
-			pq.Array(&i.DesiredDatastores),
+			pq.Array(&i.Datastores),
 			&i.EcConfigID,
+			&i.Status,
 		); err != nil {
 			return nil, err
 		}
@@ -282,18 +281,18 @@ func (q *Queries) UpdateBucketStatus(ctx context.Context, arg UpdateBucketStatus
 	return err
 }
 
-const updateDesiredDatastores = `-- name: UpdateDesiredDatastores :exec
+const updateLocationGroupStatus = `-- name: UpdateLocationGroupStatus :exec
 UPDATE location_group
-SET desired_datastores = $1
+SET status = $1
 WHERE id = $2
 `
 
-type UpdateDesiredDatastoresParams struct {
-	DesiredDatastores []int64
-	ID                int64
+type UpdateLocationGroupStatusParams struct {
+	Status LocationGroupStatus
+	ID     int64
 }
 
-func (q *Queries) UpdateDesiredDatastores(ctx context.Context, arg UpdateDesiredDatastoresParams) error {
-	_, err := q.db.ExecContext(ctx, updateDesiredDatastores, pq.Array(arg.DesiredDatastores), arg.ID)
+func (q *Queries) UpdateLocationGroupStatus(ctx context.Context, arg UpdateLocationGroupStatusParams) error {
+	_, err := q.db.ExecContext(ctx, updateLocationGroupStatus, arg.Status, arg.ID)
 	return err
 }

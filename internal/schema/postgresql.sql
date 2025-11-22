@@ -12,11 +12,13 @@ CREATE TABLE ec_config(
     UNIQUE(num_data, num_parity)
 );
 
+
+CREATE TYPE location_group_status AS ENUM ('active', 'deleting');
 CREATE TABLE location_group(
     id BIGSERIAL PRIMARY KEY,
-    current_datastores BIGINT[] NOT NULL,
-    desired_datastores BIGINT[] NOT NULL,
+    datastores BIGINT[] NOT NULL,
     ec_config_id BIGINT NOT NULL,
+    status location_group_status NOT NULL,
     FOREIGN KEY (ec_config_id) REFERENCES ec_config(id)
 );
 
