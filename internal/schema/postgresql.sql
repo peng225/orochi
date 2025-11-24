@@ -31,7 +31,7 @@ CREATE TABLE bucket(
     FOREIGN KEY (ec_config_id) REFERENCES ec_config(id)
 );
 
-CREATE TYPE object_status AS ENUM ('creating', 'active');
+CREATE TYPE object_status AS ENUM ('creating', 'updating', 'active');
 CREATE TABLE object_metadata(
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(128) NOT NULL,

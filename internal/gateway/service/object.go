@@ -100,8 +100,21 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucketName st
 			return fmt.Errorf("unexpected bucket status: %s", bucket.Status)
 		}
 		bucketID = bucket.ID
-		_, err = osvc.omRepo.GetObjectMetadataByName(ctx, name, bucket.ID)
-		if err != nil {
+		om, err := osvc.omRepo.GetObjectMetadataByName(ctx, name, bucket.ID)
+		if err == nil {
+			switch om.Status {
+			case entity.ObjectStatusCreating, entity.ObjectStatusUpdating:
+				return nil
+			case entity.ObjectStatusActive:
+				// Do nothing.
+			default:
+				return fmt.Errorf("unknown object status: %s", om.Status)
+			}
+			err = osvc.omRepo.ChangeObjectStatus(ctx, om.ID, entity.ObjectStatusUpdating)
+			if err != nil {
+				return fmt.Errorf("failed to change object status: %w", err)
+			}
+		} else {
 			if !errors.Is(err, ErrNotFound) {
 				return fmt.Errorf("failed to get object metadata by name: %w", err)
 			}
@@ -218,6 +231,9 @@ func (osvc *ObjectService) GetObject(ctx context.Context, name, bucketName strin
 		om, err := osvc.omRepo.GetObjectMetadataByName(ctx, name, bucket.ID)
 		if err != nil {
 			return fmt.Errorf("failed to get object metadata: %w", err)
+		}
+		if om.Status != entity.ObjectStatusActive {
+			return errors.Join(fmt.Errorf("object status: %s", om.Status), ErrObjectNotActive)
 		}
 		lg, err = osvc.lgRepo.GetLocationGroup(ctx, om.LocationGroupID)
 		if err != nil {
