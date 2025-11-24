@@ -1,0 +1,1 @@
+../../../../manager/infra/postgresql/sqlc/schema.sql
