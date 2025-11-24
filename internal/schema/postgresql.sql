@@ -1,7 +1,7 @@
 CREATE TYPE datastore_status AS ENUM ('active', 'down');
 CREATE TABLE datastore(
     id BIGSERIAL PRIMARY KEY,
-    base_url VARCHAR(128) NOT NULL,
+    base_url VARCHAR(128) NOT NULL UNIQUE,
     status datastore_status NOT NULL
 );
 
@@ -31,7 +31,7 @@ CREATE TABLE bucket(
     FOREIGN KEY (ec_config_id) REFERENCES ec_config(id)
 );
 
-CREATE TYPE object_status AS ENUM ('creating', 'active');
+CREATE TYPE object_status AS ENUM ('creating', 'updating', 'active');
 CREATE TABLE object_metadata(
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(128) NOT NULL,

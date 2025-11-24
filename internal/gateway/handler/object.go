@@ -46,6 +46,8 @@ func (oh *ObjectHandler) GetObject(w http.ResponseWriter, r *http.Request, bucke
 			w.WriteHeader(http.StatusBadRequest)
 		case errors.Is(err, service.ErrNotFound):
 			w.WriteHeader(http.StatusNotFound)
+		case errors.Is(err, service.ErrObjectNotActive):
+			w.WriteHeader(http.StatusServiceUnavailable)
 		default:
 			w.WriteHeader(http.StatusInternalServerError)
 		}

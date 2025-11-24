@@ -44,6 +44,19 @@ func (dr *FakeDatastoreRepository) GetDatastore(ctx context.Context, id int64) (
 	return dr.datastores[id], nil
 }
 
+func (dr *FakeDatastoreRepository) GetDatastoreByBaseURL(
+	ctx context.Context, baseURL string,
+) (*entity.Datastore, error) {
+	dr.mu.Lock()
+	defer dr.mu.Unlock()
+	for _, ds := range dr.datastores {
+		if ds.BaseURL == baseURL {
+			return ds, nil
+		}
+	}
+	return nil, service.ErrNotFound
+}
+
 func (dr *FakeDatastoreRepository) GetDatastoreIDs(ctx context.Context) ([]int64, error) {
 	dr.mu.Lock()
 	defer dr.mu.Unlock()

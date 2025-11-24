@@ -17,6 +17,7 @@ type CreateDatastoreRequest struct {
 type DatastoreRepository interface {
 	CreateDatastore(ctx context.Context, req *CreateDatastoreRequest) (int64, error)
 	GetDatastore(ctx context.Context, id int64) (*entity.Datastore, error)
+	GetDatastoreByBaseURL(ctx context.Context, baseURL string) (*entity.Datastore, error)
 	GetDatastoreIDs(ctx context.Context) ([]int64, error)
 }
 

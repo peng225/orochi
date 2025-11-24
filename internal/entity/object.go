@@ -4,6 +4,7 @@ type ObjectStatus string
 
 const (
 	ObjectStatusCreating ObjectStatus = "creating"
+	ObjectStatusUpdating ObjectStatus = "updating"
 	ObjectStatusActive   ObjectStatus = "active"
 )
 
