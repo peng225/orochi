@@ -36,6 +36,14 @@ type BucketID = int64
 // DatastoreID defines model for datastoreID.
 type DatastoreID = int64
 
+// ListDatastoresParams defines parameters for ListDatastores.
+type ListDatastoresParams struct {
+	StartFrom *int64 `form:"start-from,omitempty" json:"start-from,omitempty"`
+
+	// Limit The limit of the result array length
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // CreateBucketJSONRequestBody defines body for CreateBucket for application/json ContentType.
 type CreateBucketJSONRequestBody = CreateBucketRequest
 
@@ -53,6 +61,9 @@ type ServerInterface interface {
 	// Get a bucket
 	// (GET /bucket/{id})
 	GetBucket(w http.ResponseWriter, r *http.Request, id BucketID)
+	// List datastores
+	// (GET /datastores)
+	ListDatastores(w http.ResponseWriter, r *http.Request, params ListDatastoresParams)
 	// Create a datastore
 	// (POST /datastores)
 	CreateDatastore(w http.ResponseWriter, r *http.Request)
@@ -125,6 +136,41 @@ func (siw *ServerInterfaceWrapper) GetBucket(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetBucket(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListDatastores operation middleware
+func (siw *ServerInterfaceWrapper) ListDatastores(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListDatastoresParams
+
+	// ------------- Optional query parameter "start-from" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "start-from", r.URL.Query(), &params.StartFrom)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "start-from", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "limit", r.URL.Query(), &params.Limit)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDatastores(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -296,6 +342,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("POST "+options.BaseURL+"/bucket", wrapper.CreateBucket)
 	m.HandleFunc("DELETE "+options.BaseURL+"/bucket/{id}", wrapper.DeleteBucket)
 	m.HandleFunc("GET "+options.BaseURL+"/bucket/{id}", wrapper.GetBucket)
+	m.HandleFunc("GET "+options.BaseURL+"/datastores", wrapper.ListDatastores)
 	m.HandleFunc("POST "+options.BaseURL+"/datastores", wrapper.CreateDatastore)
 	m.HandleFunc("GET "+options.BaseURL+"/datastores/{id}", wrapper.GetDatastore)
 

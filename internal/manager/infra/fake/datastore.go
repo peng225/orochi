@@ -2,6 +2,7 @@ package fake
 
 import (
 	"context"
+	"slices"
 	"sync"
 
 	"github.com/peng225/orochi/internal/entity"
@@ -55,6 +56,28 @@ func (dr *FakeDatastoreRepository) GetDatastoreByBaseURL(
 		}
 	}
 	return nil, service.ErrNotFound
+}
+
+func (dr *FakeDatastoreRepository) GetDatastores(
+	ctx context.Context, req *service.GetDatastoresRequest,
+) ([]*entity.Datastore, error) {
+	dr.mu.Lock()
+	defer dr.mu.Unlock()
+	dss := make([]*entity.Datastore, 0, len(dr.datastores))
+	for _, ds := range dr.datastores {
+		if ds.ID >= req.StartFrom {
+			dss = append(dss, ds)
+		}
+	}
+	slices.SortFunc(dss, func(a, b *entity.Datastore) int {
+		if a.ID < b.ID {
+			return -1
+		} else if a.ID == b.ID {
+			return 0
+		}
+		return 1
+	})
+	return dss[:min(len(dss), req.Limit)], nil
 }
 
 func (dr *FakeDatastoreRepository) GetDatastoreIDs(ctx context.Context) ([]int64, error) {

@@ -200,6 +200,40 @@ func (q *Queries) SelectDatastoreIDs(ctx context.Context) ([]int64, error) {
 	return items, nil
 }
 
+const selectDatastores = `-- name: SelectDatastores :many
+SELECT id, base_url, status FROM datastore
+WHERE id >= $1
+LIMIT $2
+`
+
+type SelectDatastoresParams struct {
+	ID    int64
+	Limit int32
+}
+
+func (q *Queries) SelectDatastores(ctx context.Context, arg SelectDatastoresParams) ([]Datastore, error) {
+	rows, err := q.db.QueryContext(ctx, selectDatastores, arg.ID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Datastore
+	for rows.Next() {
+		var i Datastore
+		if err := rows.Scan(&i.ID, &i.BaseUrl, &i.Status); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const selectECConfigByNumbers = `-- name: SelectECConfigByNumbers :one
 SELECT id, num_data, num_parity FROM ec_config
 WHERE num_data = $1 AND num_parity = $2

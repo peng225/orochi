@@ -91,3 +91,30 @@ func (dr *DatastoreRepository) GetDatastoreIDs(ctx context.Context) ([]int64, er
 	}
 	return dsIDs, nil
 }
+
+func (dr *DatastoreRepository) GetDatastores(
+	ctx context.Context, req *service.GetDatastoresRequest,
+) ([]*entity.Datastore, error) {
+	tx := psqlutil.TxFromCtx(ctx)
+	q := dr.q
+	if tx != nil {
+		q = dr.q.WithTx(tx)
+	}
+	ret, err := q.SelectDatastores(ctx, query.SelectDatastoresParams{
+		ID:    req.StartFrom,
+		Limit: int32(req.Limit),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to select datastores: %w", err)
+	}
+
+	dss := make([]*entity.Datastore, 0, len(ret))
+	for _, v := range ret {
+		dss = append(dss, &entity.Datastore{
+			ID:      v.ID,
+			BaseURL: v.BaseUrl,
+			Status:  entity.DatastoreStatus(v.Status),
+		})
+	}
+	return dss, nil
+}

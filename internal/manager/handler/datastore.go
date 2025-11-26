@@ -72,3 +72,35 @@ func (dsh *DatastoreHandler) GetDatastore(w http.ResponseWriter, r *http.Request
 		slog.Error("Failed to write data.", "err", err)
 	}
 }
+
+func (dsh *DatastoreHandler) ListDatastores(
+	w http.ResponseWriter, r *http.Request, params server.ListDatastoresParams,
+) {
+	var startFrom int64 = 0
+	if params.StartFrom != nil {
+		startFrom = *params.StartFrom
+	}
+	limit := 1000
+	if params.Limit != nil {
+		limit = *params.Limit
+	}
+	dsList, nextDatastoreID, err := dsh.dss.ListDatastores(r.Context(), startFrom, limit)
+	if err != nil {
+		slog.Error("Failed to list datastores.", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.Header().Add("X-Next-Datastore-ID", strconv.FormatInt(nextDatastoreID, 10))
+	data, err := json.Marshal(dsList)
+	if err != nil {
+		slog.Error("Failed to marshal datastore list.", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	_, err = w.Write(data)
+	if err != nil {
+		slog.Error("Failed to write datastore list to body.", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+}
