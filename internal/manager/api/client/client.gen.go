@@ -40,6 +40,14 @@ type BucketID = int64
 // DatastoreID defines model for datastoreID.
 type DatastoreID = int64
 
+// ListDatastoresParams defines parameters for ListDatastores.
+type ListDatastoresParams struct {
+	StartFrom *int64 `form:"start-from,omitempty" json:"start-from,omitempty"`
+
+	// Limit The limit of the result array length
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // CreateBucketJSONRequestBody defines body for CreateBucket for application/json ContentType.
 type CreateBucketJSONRequestBody = CreateBucketRequest
 
@@ -130,6 +138,9 @@ type ClientInterface interface {
 	// GetBucket request
 	GetBucket(ctx context.Context, id BucketID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListDatastores request
+	ListDatastores(ctx context.Context, params *ListDatastoresParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// CreateDatastoreWithBody request with any body
 	CreateDatastoreWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -177,6 +188,18 @@ func (c *Client) DeleteBucket(ctx context.Context, id BucketID, reqEditors ...Re
 
 func (c *Client) GetBucket(ctx context.Context, id BucketID, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetBucketRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListDatastores(ctx context.Context, params *ListDatastoresParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListDatastoresRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -331,6 +354,71 @@ func NewGetBucketRequest(server string, id BucketID) (*http.Request, error) {
 	return req, nil
 }
 
+// NewListDatastoresRequest generates requests for ListDatastores
+func NewListDatastoresRequest(server string, params *ListDatastoresParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/datastores")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.StartFrom != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "start-from", runtime.ParamLocationQuery, *params.StartFrom); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "limit", runtime.ParamLocationQuery, *params.Limit); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewCreateDatastoreRequest calls the generic CreateDatastore builder with application/json body
 func NewCreateDatastoreRequest(server string, body CreateDatastoreJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -459,6 +547,9 @@ type ClientWithResponsesInterface interface {
 	// GetBucketWithResponse request
 	GetBucketWithResponse(ctx context.Context, id BucketID, reqEditors ...RequestEditorFn) (*GetBucketResponse, error)
 
+	// ListDatastoresWithResponse request
+	ListDatastoresWithResponse(ctx context.Context, params *ListDatastoresParams, reqEditors ...RequestEditorFn) (*ListDatastoresResponse, error)
+
 	// CreateDatastoreWithBodyWithResponse request with any body
 	CreateDatastoreWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateDatastoreResponse, error)
 
@@ -525,6 +616,28 @@ func (r GetBucketResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r GetBucketResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListDatastoresResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *[]Datastore
+}
+
+// Status returns HTTPResponse.Status
+func (r ListDatastoresResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListDatastoresResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -609,6 +722,15 @@ func (c *ClientWithResponses) GetBucketWithResponse(ctx context.Context, id Buck
 	return ParseGetBucketResponse(rsp)
 }
 
+// ListDatastoresWithResponse request returning *ListDatastoresResponse
+func (c *ClientWithResponses) ListDatastoresWithResponse(ctx context.Context, params *ListDatastoresParams, reqEditors ...RequestEditorFn) (*ListDatastoresResponse, error) {
+	rsp, err := c.ListDatastores(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListDatastoresResponse(rsp)
+}
+
 // CreateDatastoreWithBodyWithResponse request with arbitrary body returning *CreateDatastoreResponse
 func (c *ClientWithResponses) CreateDatastoreWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateDatastoreResponse, error) {
 	rsp, err := c.CreateDatastoreWithBody(ctx, contentType, body, reqEditors...)
@@ -678,6 +800,32 @@ func ParseGetBucketResponse(rsp *http.Response) (*GetBucketResponse, error) {
 	response := &GetBucketResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseListDatastoresResponse parses an HTTP response from a ListDatastoresWithResponse call
+func ParseListDatastoresResponse(rsp *http.Response) (*ListDatastoresResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListDatastoresResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []Datastore
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil

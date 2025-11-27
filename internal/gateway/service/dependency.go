@@ -15,7 +15,7 @@ type CreateDatastoreRequest struct {
 	BaseURL string
 }
 
-type DatastoreRepository interface {
+type ManagerClient interface {
 	GetDatastores(ctx context.Context) ([]*entity.Datastore, error)
 }
 

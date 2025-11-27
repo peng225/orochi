@@ -1,20 +1,12 @@
-CREATE TYPE datastore_status AS ENUM ('active', 'down');
-CREATE TABLE datastore(
-    id BIGSERIAL PRIMARY KEY,
-    base_url VARCHAR(128) NOT NULL UNIQUE,
-    status datastore_status NOT NULL
-);
-
-CREATE TABLE ec_config(
+CREATE TABLE IF NOT EXISTS ec_config(
     id BIGSERIAL PRIMARY KEY,
     num_data INTEGER NOT NULL,
     num_parity INTEGER NOT NULL,
     UNIQUE(num_data, num_parity)
 );
 
-
 CREATE TYPE location_group_status AS ENUM ('active', 'deleting');
-CREATE TABLE location_group(
+CREATE TABLE IF NOT EXISTS location_group(
     id BIGSERIAL PRIMARY KEY,
     datastores BIGINT[] NOT NULL,
     ec_config_id BIGINT NOT NULL,
@@ -23,7 +15,7 @@ CREATE TABLE location_group(
 );
 
 CREATE TYPE bucket_status AS ENUM ('active', 'deleted');
-CREATE TABLE bucket(
+CREATE TABLE IF NOT EXISTS bucket(
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(128) NOT NULL UNIQUE,
     ec_config_id BIGINT NOT NULL,
@@ -32,7 +24,7 @@ CREATE TABLE bucket(
 );
 
 CREATE TYPE object_status AS ENUM ('creating', 'updating', 'active');
-CREATE TABLE object_metadata(
+CREATE TABLE IF NOT EXISTS object_metadata(
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(128) NOT NULL,
     status object_status NOT NULL,
@@ -42,14 +34,14 @@ CREATE TABLE object_metadata(
     FOREIGN KEY (location_group_id) REFERENCES location_group(id)
 );
 
-CREATE TABLE object_version(
+CREATE TABLE IF NOT EXISTS object_version(
     id BIGSERIAL PRIMARY KEY,
     update_time TIMESTAMP NOT NULL,
     object_id BIGINT NOT NULL,
     FOREIGN KEY (object_id) REFERENCES object_metadata(id)
 );
 
-CREATE TABLE job(
+CREATE TABLE IF NOT EXISTS job(
     id BIGSERIAL PRIMARY KEY,
     kind VARCHAR(128) NOT NULL,
     data JSONB NOT NULL

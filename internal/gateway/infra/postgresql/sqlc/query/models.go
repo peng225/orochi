@@ -53,48 +53,6 @@ func (ns NullBucketStatus) Value() (driver.Value, error) {
 	return string(ns.BucketStatus), nil
 }
 
-type DatastoreStatus string
-
-const (
-	DatastoreStatusActive DatastoreStatus = "active"
-	DatastoreStatusDown   DatastoreStatus = "down"
-)
-
-func (e *DatastoreStatus) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = DatastoreStatus(s)
-	case string:
-		*e = DatastoreStatus(s)
-	default:
-		return fmt.Errorf("unsupported scan type for DatastoreStatus: %T", src)
-	}
-	return nil
-}
-
-type NullDatastoreStatus struct {
-	DatastoreStatus DatastoreStatus
-	Valid           bool // Valid is true if DatastoreStatus is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullDatastoreStatus) Scan(value interface{}) error {
-	if value == nil {
-		ns.DatastoreStatus, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.DatastoreStatus.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullDatastoreStatus) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.DatastoreStatus), nil
-}
-
 type LocationGroupStatus string
 
 const (
@@ -185,12 +143,6 @@ type Bucket struct {
 	Name       string
 	EcConfigID int64
 	Status     BucketStatus
-}
-
-type Datastore struct {
-	ID      int64
-	BaseUrl string
-	Status  DatastoreStatus
 }
 
 type EcConfig struct {

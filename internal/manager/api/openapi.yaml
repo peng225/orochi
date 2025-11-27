@@ -31,6 +31,44 @@ paths:
                 example: 1
         '400':
           description: Bad request
+    get:
+      summary: List datastores
+      operationId: listDatastores
+      parameters:
+        - name: start-from
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            default: 0
+        - name: limit
+          in: query
+          description: The limit of the result array length
+          required: false
+          schema:
+            type: integer
+            default: 1000
+      responses:
+        '200':
+          description: Datastore listed successfully
+          headers:
+            X-Next-Datastore-ID:
+              description: |
+                Next datastore ID for the continuous requests.
+                If the last datastore is included in the result,
+                this header is set to the maximum value of int64.
+              schema:
+                type: integer
+                format: int64
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/datastore'
+        '400':
+          description: Bad request
   /datastores/{id}:
     get:
       summary: Get a datastore

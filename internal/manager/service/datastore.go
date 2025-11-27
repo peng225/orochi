@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"regexp"
 
 	"github.com/peng225/orochi/internal/entity"
@@ -64,4 +65,22 @@ func (dss *DatastoreService) CreateDatastore(ctx context.Context, baseURL string
 
 func (dss *DatastoreService) GetDatastore(ctx context.Context, id int64) (*entity.Datastore, error) {
 	return dss.dsRepo.GetDatastore(ctx, id)
+}
+
+func (dss *DatastoreService) ListDatastores(
+	ctx context.Context, startFrom int64, limit int,
+) ([]*entity.Datastore, int64, error) {
+	dsList, err := dss.dsRepo.GetDatastores(ctx, &GetDatastoresRequest{
+		StartFrom: startFrom,
+		Limit:     limit + 1,
+	})
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get datastores: %w", err)
+	}
+	var nextDatastoreID int64 = math.MaxInt64
+	if len(dsList) == limit+1 {
+		nextDatastoreID = dsList[limit].ID
+		dsList = dsList[:limit]
+	}
+	return dsList, nextDatastoreID, nil
 }

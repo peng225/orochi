@@ -1,6 +1,3 @@
--- name: SelectDatastores :many
-SELECT * FROM datastore;
-
 -- name: InsertObjectMetadata :one
 INSERT INTO object_metadata (
    name,

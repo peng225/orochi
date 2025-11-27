@@ -14,6 +14,11 @@ WHERE id = $1;
 SELECT * FROM datastore
 WHERE base_url = $1;
 
+-- name: SelectDatastores :many
+SELECT * FROM datastore
+WHERE id >= $1
+LIMIT $2;
+
 -- name: SelectDatastoreIDs :many
 SELECT id FROM datastore;
 

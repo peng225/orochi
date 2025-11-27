@@ -25,11 +25,13 @@ services:
     networks:
       - testnet
     volumes:
-      - ../internal/schema:/schema
+      - ../internal/gateway/infra/postgresql/sqlc:/schema/gateway
+      - ../internal/manager/infra/postgresql/sqlc:/schema/manager
     entrypoint: >
       bash -c "
         echo 'Initializing database...';
-        psql 'postgresql://testuser:testpass@postgres:5432/orochi' -f /schema/postgresql.sql;
+        psql 'postgresql://testuser:testpass@postgres:5432/orochi' -f /schema/gateway/schema.sql;
+        psql 'postgresql://testuser:testpass@postgres:5432/orochi' -f /schema/manager/schema.sql;
         echo 'Database initialized successfully.';
       "
     restart: "no"
@@ -128,7 +130,11 @@ services:
         condition: service_started
       initdb:
         condition: service_completed_successfully
-    command: ["gateway", "-p", "8081", "--log-level", "debug"]
+    command:
+      - "gateway"
+      - "-p=8081"
+      - "--log-level=debug"
+      - "--manager-base-url=http://manager:8080"
     networks:
       - testnet
     ports:

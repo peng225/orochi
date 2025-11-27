@@ -14,10 +14,16 @@ type CreateDatastoreRequest struct {
 	BaseURL string
 }
 
+type GetDatastoresRequest struct {
+	StartFrom int64
+	Limit     int
+}
+
 type DatastoreRepository interface {
 	CreateDatastore(ctx context.Context, req *CreateDatastoreRequest) (int64, error)
 	GetDatastore(ctx context.Context, id int64) (*entity.Datastore, error)
 	GetDatastoreByBaseURL(ctx context.Context, baseURL string) (*entity.Datastore, error)
+	GetDatastores(ctx context.Context, req *GetDatastoresRequest) ([]*entity.Datastore, error)
 	GetDatastoreIDs(ctx context.Context) ([]int64, error)
 }
 

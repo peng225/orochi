@@ -30,10 +30,10 @@ var (
 type ObjectService struct {
 	tx         Transaction
 	mu         sync.RWMutex
+	mgrClient  ManagerClient
 	dsClients  map[int64]DatastoreClient
 	dscFactory DatastoreClientFactory
 	dsStatus   map[int64]entity.DatastoreStatus
-	dsRepo     DatastoreRepository
 	omRepo     ObjectMetadataRepository
 	ovRepo     ObjectVersionRepository
 	bucketRepo BucketRepository
@@ -43,8 +43,8 @@ type ObjectService struct {
 
 func NewObjectStore(
 	tx Transaction,
+	mgrClient ManagerClient,
 	dscFactory DatastoreClientFactory,
-	dsRepo DatastoreRepository,
 	omRepo ObjectMetadataRepository,
 	ovRepo ObjectVersionRepository,
 	bucketRepo BucketRepository,
@@ -55,10 +55,10 @@ func NewObjectStore(
 	dsStatus := make(map[int64]entity.DatastoreStatus)
 	return &ObjectService{
 		tx:         tx,
+		mgrClient:  mgrClient,
 		dsClients:  dsClients,
 		dscFactory: dscFactory,
 		dsStatus:   dsStatus,
-		dsRepo:     dsRepo,
 		omRepo:     omRepo,
 		ovRepo:     ovRepo,
 		bucketRepo: bucketRepo,
@@ -68,7 +68,7 @@ func NewObjectStore(
 }
 
 func (osvc *ObjectService) Refresh(ctx context.Context) error {
-	dss, err := osvc.dsRepo.GetDatastores(ctx)
+	dss, err := osvc.mgrClient.GetDatastores(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get datastores: %w", err)
 	}
