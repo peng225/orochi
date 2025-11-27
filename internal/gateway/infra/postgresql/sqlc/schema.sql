@@ -1,10 +1,3 @@
-CREATE TYPE datastore_status AS ENUM ('active', 'down');
-CREATE TABLE IF NOT EXISTS datastore(
-    id BIGSERIAL PRIMARY KEY,
-    base_url VARCHAR(128) NOT NULL UNIQUE,
-    status datastore_status NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS ec_config(
     id BIGSERIAL PRIMARY KEY,
     num_data INTEGER NOT NULL,

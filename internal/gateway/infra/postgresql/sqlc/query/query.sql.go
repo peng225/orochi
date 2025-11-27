@@ -96,33 +96,6 @@ func (q *Queries) SelectBucketByName(ctx context.Context, name string) (Bucket, 
 	return i, err
 }
 
-const selectDatastores = `-- name: SelectDatastores :many
-SELECT id, base_url, status FROM datastore
-`
-
-func (q *Queries) SelectDatastores(ctx context.Context) ([]Datastore, error) {
-	rows, err := q.db.QueryContext(ctx, selectDatastores)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Datastore
-	for rows.Next() {
-		var i Datastore
-		if err := rows.Scan(&i.ID, &i.BaseUrl, &i.Status); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const selectECConfig = `-- name: SelectECConfig :one
 SELECT id, num_data, num_parity FROM ec_config
 WHERE id = $1

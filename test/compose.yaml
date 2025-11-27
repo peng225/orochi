@@ -130,7 +130,11 @@ services:
         condition: service_started
       initdb:
         condition: service_completed_successfully
-    command: ["gateway", "-p", "8081", "--log-level", "debug"]
+    command:
+      - "gateway"
+      - "-p=8081"
+      - "--log-level=debug"
+      - "--manager-base-url=http://manager:8080"
     networks:
       - testnet
     ports:
