@@ -13,8 +13,8 @@ import (
 type BucketStatus string
 
 const (
-	BucketStatusActive  BucketStatus = "active"
-	BucketStatusDeleted BucketStatus = "deleted"
+	BucketStatusActive   BucketStatus = "active"
+	BucketStatusDeleting BucketStatus = "deleting"
 )
 
 func (e *BucketStatus) Scan(src interface{}) error {

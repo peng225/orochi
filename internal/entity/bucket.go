@@ -3,8 +3,8 @@ package entity
 type BucketStatus string
 
 const (
-	BucketStatusActive  BucketStatus = "active"
-	BucketStatusDeleted BucketStatus = "deleted"
+	BucketStatusActive   BucketStatus = "active"
+	BucketStatusDeleting BucketStatus = "deleting"
 )
 
 type Bucket struct {

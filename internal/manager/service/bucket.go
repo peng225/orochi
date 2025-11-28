@@ -114,7 +114,7 @@ func (bs *BucketService) GetBucket(ctx context.Context, id int64) (*entity.Bucke
 func (bs *BucketService) DeleteBucket(ctx context.Context, id int64) error {
 	var jobID int64
 	err := bs.tx.Do(ctx, func(ctx context.Context) error {
-		err := bs.bucketRepo.ChangeBucketStatus(ctx, id, entity.BucketStatusDeleted)
+		err := bs.bucketRepo.ChangeBucketStatus(ctx, id, entity.BucketStatusDeleting)
 		if err != nil {
 			return fmt.Errorf("failed to change bucket status: %w", err)
 		}
