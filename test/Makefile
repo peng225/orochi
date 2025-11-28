@@ -9,11 +9,11 @@ setup:
 
 .PHONY: test
 test:
-	go test -v ./...
+	go test -v -count=1 ./...
 
 .PHONY: test-io-only
 test-io-only:
-	go test -v ./util.go ./object_test.go
+	go test -v -count=1 ./util.go ./object_test.go
 
 data/datastore%:
 	mkdir -p $@
