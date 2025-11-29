@@ -9,10 +9,12 @@ import (
 	"time"
 
 	"github.com/peng225/orochi/internal/gateway/api/client"
+	pclient "github.com/peng225/orochi/internal/gateway/api/private/client"
 )
 
 type Client struct {
-	c *client.Client
+	c  *client.Client
+	pc *pclient.Client
 }
 
 func NewClient(baseURL string) *Client {
@@ -24,8 +26,17 @@ func NewClient(baseURL string) *Client {
 	if err != nil {
 		panic(err)
 	}
+	pc, err := pclient.NewClient(baseURL, pclient.WithHTTPClient(
+		&http.Client{
+			Timeout: 2 * time.Second,
+		},
+	))
+	if err != nil {
+		panic(err)
+	}
 	return &Client{
-		c: c,
+		c:  c,
+		pc: pc,
 	}
 }
 
@@ -59,4 +70,15 @@ func (c *Client) ListObjectNames(ctx context.Context, bucket string) ([]string, 
 		return nil, fmt.Errorf("failed to unmarshal object names: %w", err)
 	}
 	return objectNames, nil
+}
+
+func (c *Client) DeleteBucket(ctx context.Context, name string) error {
+	resp, err := c.pc.DeleteBucket(ctx, name)
+	if err != nil {
+		return fmt.Errorf("DeleteBucket failed: %w", err)
+	}
+	if resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+	return nil
 }

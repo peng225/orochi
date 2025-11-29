@@ -31,19 +31,19 @@ type DatastoreClientFactory interface {
 
 type CreateObjectMetadataRequest struct {
 	Name            string
-	BucketID        int64
+	BucketName      string
 	LocationGroupID int64
 }
 
 type GetObjectMetadatasRequest struct {
-	BucketID  int64
-	StartFrom int64
-	Limit     int
+	BucketName string
+	StartFrom  int64
+	Limit      int
 }
 
 type ObjectMetadataRepository interface {
 	CreateObjectMetadata(ctx context.Context, req *CreateObjectMetadataRequest) (int64, error)
-	GetObjectMetadataByName(ctx context.Context, name string, bucketID int64) (*entity.ObjectMetadata, error)
+	GetObjectMetadataByName(ctx context.Context, name, bucketName string) (*entity.ObjectMetadata, error)
 	GetObjectMetadatas(ctx context.Context, req *GetObjectMetadatasRequest) ([]*entity.ObjectMetadata, error)
 	ChangeObjectStatus(ctx context.Context, id int64, status entity.ObjectStatus) error
 	DeleteObjectMetadata(ctx context.Context, id int64) error
@@ -65,4 +65,5 @@ type LocationGroupRepository interface {
 
 type ECConfigRepository interface {
 	GetECConfig(ctx context.Context, id int64) (*entity.ECConfig, error)
+	GetECConfigByNumbers(ctx context.Context, numData, numParity int) (*entity.ECConfig, error)
 }

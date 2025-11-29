@@ -11,48 +11,6 @@ import (
 	"time"
 )
 
-type BucketStatus string
-
-const (
-	BucketStatusActive   BucketStatus = "active"
-	BucketStatusDeleting BucketStatus = "deleting"
-)
-
-func (e *BucketStatus) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = BucketStatus(s)
-	case string:
-		*e = BucketStatus(s)
-	default:
-		return fmt.Errorf("unsupported scan type for BucketStatus: %T", src)
-	}
-	return nil
-}
-
-type NullBucketStatus struct {
-	BucketStatus BucketStatus
-	Valid        bool // Valid is true if BucketStatus is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullBucketStatus) Scan(value interface{}) error {
-	if value == nil {
-		ns.BucketStatus, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.BucketStatus.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullBucketStatus) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.BucketStatus), nil
-}
-
 type LocationGroupStatus string
 
 const (
@@ -138,13 +96,6 @@ func (ns NullObjectStatus) Value() (driver.Value, error) {
 	return string(ns.ObjectStatus), nil
 }
 
-type Bucket struct {
-	ID         int64
-	Name       string
-	EcConfigID int64
-	Status     BucketStatus
-}
-
 type EcConfig struct {
 	ID        int64
 	NumData   int32
@@ -168,7 +119,7 @@ type ObjectMetadatum struct {
 	ID              int64
 	Name            string
 	Status          ObjectStatus
-	BucketID        int64
+	BucketName      string
 	LocationGroupID int64
 }
 

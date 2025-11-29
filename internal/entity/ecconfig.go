@@ -44,3 +44,11 @@ func ParseECConfig(param string) (int, int, error) {
 	}
 	return int(numData), int(numParity), nil
 }
+
+func MustParseECConfig(param string) (int, int) {
+	d, p, err := ParseECConfig(param)
+	if err != nil {
+		panic(err)
+	}
+	return d, p
+}

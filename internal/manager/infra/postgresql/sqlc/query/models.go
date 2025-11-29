@@ -13,6 +13,7 @@ import (
 type BucketStatus string
 
 const (
+	BucketStatusCreating BucketStatus = "creating"
 	BucketStatusActive   BucketStatus = "active"
 	BucketStatusDeleting BucketStatus = "deleting"
 )
@@ -137,10 +138,10 @@ func (ns NullLocationGroupStatus) Value() (driver.Value, error) {
 }
 
 type Bucket struct {
-	ID         int64
-	Name       string
-	EcConfigID int64
-	Status     BucketStatus
+	ID       int64
+	Name     string
+	EcConfig string
+	Status   BucketStatus
 }
 
 type Datastore struct {

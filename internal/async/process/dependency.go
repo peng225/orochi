@@ -28,6 +28,7 @@ type DatastoreRepository interface {
 type GatewayClient interface {
 	DeleteObject(ctx context.Context, bucket, object string) error
 	ListObjectNames(ctx context.Context, bucket string) ([]string, error)
+	DeleteBucket(ctx context.Context, name string) error
 }
 
 type DatastoreClient interface {

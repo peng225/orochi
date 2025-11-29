@@ -28,42 +28,42 @@ var (
 )
 
 type ObjectService struct {
-	tx         Transaction
-	mu         sync.RWMutex
-	mgrClient  ManagerClient
-	dsClients  map[int64]DatastoreClient
-	dscFactory DatastoreClientFactory
-	dsStatus   map[int64]entity.DatastoreStatus
-	omRepo     ObjectMetadataRepository
-	ovRepo     ObjectVersionRepository
-	bucketRepo BucketRepository
-	lgRepo     LocationGroupRepository
-	eccRepo    ECConfigRepository
+	tx            Transaction
+	mu            sync.RWMutex
+	mgrClient     ManagerClient
+	dsClients     map[int64]DatastoreClient
+	dscFactory    DatastoreClientFactory
+	dsStatus      map[int64]entity.DatastoreStatus
+	bucketService *BucketService
+	omRepo        ObjectMetadataRepository
+	ovRepo        ObjectVersionRepository
+	lgRepo        LocationGroupRepository
+	eccRepo       ECConfigRepository
 }
 
 func NewObjectStore(
 	tx Transaction,
 	mgrClient ManagerClient,
 	dscFactory DatastoreClientFactory,
+	bucketService *BucketService,
 	omRepo ObjectMetadataRepository,
 	ovRepo ObjectVersionRepository,
-	bucketRepo BucketRepository,
 	lgRepo LocationGroupRepository,
 	eccRepo ECConfigRepository,
 ) *ObjectService {
 	dsClients := make(map[int64]DatastoreClient)
 	dsStatus := make(map[int64]entity.DatastoreStatus)
 	return &ObjectService{
-		tx:         tx,
-		mgrClient:  mgrClient,
-		dsClients:  dsClients,
-		dscFactory: dscFactory,
-		dsStatus:   dsStatus,
-		omRepo:     omRepo,
-		ovRepo:     ovRepo,
-		bucketRepo: bucketRepo,
-		lgRepo:     lgRepo,
-		eccRepo:    eccRepo,
+		tx:            tx,
+		mgrClient:     mgrClient,
+		dsClients:     dsClients,
+		dscFactory:    dscFactory,
+		dsStatus:      dsStatus,
+		bucketService: bucketService,
+		omRepo:        omRepo,
+		ovRepo:        ovRepo,
+		lgRepo:        lgRepo,
+		eccRepo:       eccRepo,
 	}
 }
 
@@ -87,20 +87,15 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucketName st
 		return errors.Join(fmt.Errorf("invalid object name: %s", name), ErrInvalidParameter)
 	}
 
-	var bucketID int64
 	err := osvc.tx.Do(ctx, func(ctx context.Context) error {
-		bucket, err := osvc.bucketRepo.GetBucketByName(ctx, bucketName)
+		bucket, err := osvc.bucketService.GetBucket(bucketName)
 		if err != nil {
-			if errors.Is(err, ErrNotFound) {
-				return errors.Join(fmt.Errorf("bucket not found"), ErrInvalidParameter)
-			}
-			return fmt.Errorf("failed to get bucket by name: %w", err)
+			return errors.Join(fmt.Errorf("bucket not found"), ErrInvalidParameter)
 		}
 		if bucket.Status != entity.BucketStatusActive {
 			return fmt.Errorf("unexpected bucket status: %s", bucket.Status)
 		}
-		bucketID = bucket.ID
-		om, err := osvc.omRepo.GetObjectMetadataByName(ctx, name, bucket.ID)
+		om, err := osvc.omRepo.GetObjectMetadataByName(ctx, name, bucket.Name)
 		if err == nil {
 			switch om.Status {
 			case entity.ObjectStatusCreating, entity.ObjectStatusUpdating:
@@ -130,7 +125,7 @@ func (osvc *ObjectService) CreateObject(ctx context.Context, name, bucketName st
 	}
 
 	err = osvc.tx.Do(ctx, func(ctx context.Context) error {
-		om, err := osvc.omRepo.GetObjectMetadataByName(ctx, name, bucketID)
+		om, err := osvc.omRepo.GetObjectMetadataByName(ctx, name, bucketName)
 		if err != nil {
 			return fmt.Errorf("failed to get object metadata: %w", err)
 		}
@@ -221,14 +216,11 @@ func (osvc *ObjectService) GetObject(ctx context.Context, name, bucketName strin
 	var lg *entity.LocationGroup
 	var ecConfig *entity.ECConfig
 	err := osvc.tx.Do(ctx, func(ctx context.Context) error {
-		bucket, err := osvc.bucketRepo.GetBucketByName(ctx, bucketName)
+		bucket, err := osvc.bucketService.GetBucket(bucketName)
 		if err != nil {
-			if errors.Is(err, ErrNotFound) {
-				return errors.Join(fmt.Errorf("bucket not found"), ErrInvalidParameter)
-			}
-			return fmt.Errorf("failed to get bucket by name: %w", err)
+			return errors.Join(fmt.Errorf("bucket not found"), ErrInvalidParameter)
 		}
-		om, err := osvc.omRepo.GetObjectMetadataByName(ctx, name, bucket.ID)
+		om, err := osvc.omRepo.GetObjectMetadataByName(ctx, name, bucket.Name)
 		if err != nil {
 			return fmt.Errorf("failed to get object metadata: %w", err)
 		}
@@ -288,7 +280,12 @@ func (osvc *ObjectService) createObjectMetadata(
 	name string,
 	bucket *entity.Bucket,
 ) (int64, error) {
-	lgs, err := osvc.lgRepo.GetLocationGroupsByECConfigID(ctx, bucket.ECConfigID)
+	d, p := entity.MustParseECConfig(bucket.ECConfig)
+	ecc, err := osvc.eccRepo.GetECConfigByNumbers(ctx, d, p)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get EC config by numbers: %w", err)
+	}
+	lgs, err := osvc.lgRepo.GetLocationGroupsByECConfigID(ctx, ecc.ID)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get location groups: %w", err)
 	}
@@ -299,7 +296,7 @@ func (osvc *ObjectService) createObjectMetadata(
 
 	id, err := osvc.omRepo.CreateObjectMetadata(ctx, &CreateObjectMetadataRequest{
 		Name:            name,
-		BucketID:        bucket.ID,
+		BucketName:      bucket.Name,
 		LocationGroupID: lg.ID,
 	})
 	if err != nil {
@@ -316,14 +313,11 @@ func (osvc *ObjectService) DeleteObject(ctx context.Context, name, bucketName st
 	}
 
 	err := osvc.tx.Do(ctx, func(ctx context.Context) error {
-		bucket, err := osvc.bucketRepo.GetBucketByName(ctx, bucketName)
+		bucket, err := osvc.bucketService.GetBucket(bucketName)
 		if err != nil {
-			if errors.Is(err, ErrNotFound) {
-				return errors.Join(fmt.Errorf("bucket not found"), ErrInvalidParameter)
-			}
-			return fmt.Errorf("failed to get bucket by name: %w", err)
+			return errors.Join(fmt.Errorf("bucket not found"), ErrInvalidParameter)
 		}
-		om, err := osvc.omRepo.GetObjectMetadataByName(ctx, name, bucket.ID)
+		om, err := osvc.omRepo.GetObjectMetadataByName(ctx, name, bucket.Name)
 		if err != nil {
 			if errors.Is(err, ErrNotFound) {
 				return nil
@@ -380,17 +374,14 @@ func (osvc *ObjectService) ListObjects(
 	if limit > 1000 {
 		return nil, 0, fmt.Errorf("limit must not larger than 1000: %w", ErrInvalidParameter)
 	}
-	b, err := osvc.bucketRepo.GetBucketByName(ctx, bucketName)
+	b, err := osvc.bucketService.GetBucket(bucketName)
 	if err != nil {
-		if errors.Is(err, ErrNotFound) {
-			return nil, 0, ErrInvalidParameter
-		}
-		return nil, 0, fmt.Errorf("failed to get bucket by name: %w", err)
+		return nil, 0, ErrInvalidParameter
 	}
 	oms, err := osvc.omRepo.GetObjectMetadatas(ctx, &GetObjectMetadatasRequest{
-		BucketID:  b.ID,
-		StartFrom: startFrom,
-		Limit:     limit + 1,
+		BucketName: b.Name,
+		StartFrom:  startFrom,
+		Limit:      limit + 1,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get object metadatas: %w", err)

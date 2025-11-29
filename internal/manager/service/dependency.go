@@ -39,8 +39,8 @@ type LocationGroupRepository interface {
 }
 
 type CreateBucketRequest struct {
-	Name       string
-	ECConfigID int64
+	Name     string
+	ECConfig string
 }
 
 type BucketRepository interface {
@@ -68,4 +68,10 @@ type ECConfigRepository interface {
 	CreateECConfig(ctx context.Context, req *CreateECConfigRequest) (int64, error)
 	GetECConfigByNumbers(ctx context.Context, numData, numParity int) (*entity.ECConfig, error)
 	GetECConfigs(ctx context.Context) ([]*entity.ECConfig, error)
+}
+
+type GatewayClient interface {
+	CreateBucket(ctx context.Context, name, ecConfig string) error
+	ChangeBucketStatusToDeleting(ctx context.Context, name string) error
+	DeleteBucket(ctx context.Context, name string) error
 }

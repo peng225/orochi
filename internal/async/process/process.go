@@ -134,7 +134,13 @@ func (p *Processor) processDeleteAllObjectsInBucketJob(ctx context.Context, job 
 		}
 		if len(objectNames) == 0 {
 			slog.Info("No object found in the bucket. Job finished.", "bucketID", param.BucketID)
-			err := p.bucketRepo.DeleteBucket(ctx, param.BucketID)
+			for _, c := range p.gwClients {
+				err := c.DeleteBucket(ctx, b.Name)
+				if err != nil {
+					return fmt.Errorf("failed to delete bucket for gateway: %w", err)
+				}
+			}
+			err = p.bucketRepo.DeleteBucket(ctx, param.BucketID)
 			if err != nil {
 				return fmt.Errorf("failed to delete bucket: %w", err)
 			}

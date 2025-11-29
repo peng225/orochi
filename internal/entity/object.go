@@ -12,6 +12,6 @@ type ObjectMetadata struct {
 	ID              int64        `json:"id,omitempty"`
 	Name            string       `json:"name,omitempty"`
 	Status          ObjectStatus `json:"status,omitempty"`
-	BucketID        int64        `json:"bucketID,omitempty"`
+	BucketName      string       `json:"bucketName,omitempty"`
 	LocationGroupID int64        `json:"locationGroupID,omitempty"`
 }

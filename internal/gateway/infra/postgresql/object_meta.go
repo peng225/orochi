@@ -33,7 +33,7 @@ func (omr *ObjectMetadataRepository) CreateObjectMetadata(
 	}
 	id, err := q.InsertObjectMetadata(ctx, query.InsertObjectMetadataParams{
 		Name:            req.Name,
-		BucketID:        req.BucketID,
+		BucketName:      req.BucketName,
 		LocationGroupID: req.LocationGroupID,
 	})
 	if err != nil {
@@ -43,9 +43,7 @@ func (omr *ObjectMetadataRepository) CreateObjectMetadata(
 }
 
 func (omr *ObjectMetadataRepository) GetObjectMetadataByName(
-	ctx context.Context,
-	name string,
-	bucketID int64,
+	ctx context.Context, name, bucketName string,
 ) (*entity.ObjectMetadata, error) {
 	tx := psqlutil.TxFromCtx(ctx)
 	q := omr.q
@@ -53,8 +51,8 @@ func (omr *ObjectMetadataRepository) GetObjectMetadataByName(
 		q = omr.q.WithTx(tx)
 	}
 	om, err := q.SelectObjectMetadataByName(ctx, query.SelectObjectMetadataByNameParams{
-		Name:     name,
-		BucketID: bucketID,
+		Name:       name,
+		BucketName: bucketName,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to select object metadata: %w", err)
@@ -70,7 +68,7 @@ func (omr *ObjectMetadataRepository) GetObjectMetadataByName(
 		ID:              om[0].ID,
 		Name:            om[0].Name,
 		Status:          entity.ObjectStatus(om[0].Status),
-		BucketID:        om[0].BucketID,
+		BucketName:      om[0].BucketName,
 		LocationGroupID: om[0].LocationGroupID,
 	}, nil
 }
@@ -115,9 +113,9 @@ func (omr *ObjectMetadataRepository) GetObjectMetadatas(
 		q = omr.q.WithTx(tx)
 	}
 	ret, err := q.SelectObjectMetadatas(ctx, query.SelectObjectMetadatasParams{
-		ID:       req.StartFrom,
-		BucketID: req.BucketID,
-		Limit:    int32(req.Limit),
+		ID:         req.StartFrom,
+		BucketName: req.BucketName,
+		Limit:      int32(req.Limit),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get object metadatas: %w", err)
@@ -128,7 +126,7 @@ func (omr *ObjectMetadataRepository) GetObjectMetadatas(
 		oms = append(oms, &entity.ObjectMetadata{
 			ID:              v.ID,
 			Name:            v.Name,
-			BucketID:        v.BucketID,
+			BucketName:      v.BucketName,
 			LocationGroupID: v.LocationGroupID,
 		})
 	}

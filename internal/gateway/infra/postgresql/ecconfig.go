@@ -43,3 +43,28 @@ func (ecr *ECConfigRepository) GetECConfig(ctx context.Context, id int64) (*enti
 		NumParity: int(ecc.NumParity),
 	}, nil
 }
+
+func (ecr *ECConfigRepository) GetECConfigByNumbers(
+	ctx context.Context, numData, numParity int,
+) (*entity.ECConfig, error) {
+	tx := psqlutil.TxFromCtx(ctx)
+	q := ecr.q
+	if tx != nil {
+		q = ecr.q.WithTx(tx)
+	}
+	ecc, err := q.SelectECConfigByNumbers(ctx, query.SelectECConfigByNumbersParams{
+		NumData:   int32(numData),
+		NumParity: int32(numParity),
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, service.ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to select EC config by numbers: %w", err)
+	}
+	return &entity.ECConfig{
+		ID:        ecc.ID,
+		NumData:   int(ecc.NumData),
+		NumParity: int(ecc.NumParity),
+	}, nil
+}
