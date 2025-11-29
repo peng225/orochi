@@ -51,13 +51,13 @@ to quickly create a Cobra application.`,
 			slog.Error("Invalid BASE_URL env.", "BASE_URL", baseURL)
 			os.Exit(1)
 		}
-		baseMgrURL, err := cmd.Flags().GetString("manager-base-url")
+		mgrBaseURL, err := cmd.Flags().GetString("manager-base-url")
 		if err != nil {
 			slog.Error(err.Error())
 			os.Exit(1)
 		}
 
-		err = registrar.Register(cmd.Context(), baseURL, baseMgrURL)
+		err = registrar.Register(cmd.Context(), baseURL, mgrBaseURL)
 		if err != nil {
 			slog.Error(err.Error())
 			os.Exit(1)

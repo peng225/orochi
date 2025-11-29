@@ -43,7 +43,7 @@ to quickly create a Cobra application.`,
 			slog.Error(err.Error())
 			os.Exit(1)
 		}
-		baseMgrURL, err := cmd.Flags().GetString("manager-base-url")
+		mgrBaseURL, err := cmd.Flags().GetString("manager-base-url")
 		if err != nil {
 			slog.Error(err.Error())
 			os.Exit(1)
@@ -58,7 +58,7 @@ to quickly create a Cobra application.`,
 		lgRepo := postgresql.NewLocationGroupRepository(db)
 		eccRepo := postgresql.NewECConfigRepository(db)
 		objService := service.NewObjectStore(
-			tx, manager.NewClient(baseMgrURL), datastore.NewClientFactory(),
+			tx, manager.NewClient(mgrBaseURL), datastore.NewClientFactory(),
 			omRepo, ovRepo, bucketRepo, lgRepo, eccRepo,
 		)
 		go periodic(cmd.Context(), objService)
