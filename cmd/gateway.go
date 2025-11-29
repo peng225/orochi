@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	pserver "github.com/peng225/orochi/internal/gateway/api/private/server"
 	"github.com/peng225/orochi/internal/gateway/api/server"
 	"github.com/peng225/orochi/internal/gateway/handler"
 	"github.com/peng225/orochi/internal/gateway/infra/datastore"
@@ -43,27 +44,36 @@ to quickly create a Cobra application.`,
 			slog.Error(err.Error())
 			os.Exit(1)
 		}
-		baseMgrURL, err := cmd.Flags().GetString("manager-base-url")
+		mgrBaseURL, err := cmd.Flags().GetString("manager-base-url")
 		if err != nil {
 			slog.Error(err.Error())
 			os.Exit(1)
 		}
 
+		bucketService := service.NewBucketService()
 		db := psqlutil.InitDB()
 		defer db.Close()
 		tx := psqlutil.NewTransaction(db)
 		omRepo := postgresql.NewObjectMetadataRepository(db)
 		ovRepo := postgresql.NewObjectVersionRepository(db)
-		bucketRepo := postgresql.NewBucketRepository(db)
 		lgRepo := postgresql.NewLocationGroupRepository(db)
 		eccRepo := postgresql.NewECConfigRepository(db)
 		objService := service.NewObjectStore(
-			tx, manager.NewClient(baseMgrURL), datastore.NewClientFactory(),
-			omRepo, ovRepo, bucketRepo, lgRepo, eccRepo,
+			tx, manager.NewClient(mgrBaseURL), datastore.NewClientFactory(),
+			bucketService, omRepo, ovRepo, lgRepo, eccRepo,
 		)
+
 		go periodic(cmd.Context(), objService)
+
 		objHandler := handler.NewObjectHandler(objService)
 		h := server.Handler(objHandler)
+		bucketHandler := handler.NewBucketHandler(bucketService)
+		mux, ok := h.(*http.ServeMux)
+		if !ok {
+			panic("Object handler must be converted to mux type.")
+		}
+		h = pserver.HandlerFromMux(bucketHandler, mux)
+
 		err = http.ListenAndServe(net.JoinHostPort("", port), h)
 		if err != nil {
 			slog.Error("Server failed to start.", "err", err)

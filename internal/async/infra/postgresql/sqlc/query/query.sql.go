@@ -30,7 +30,7 @@ func (q *Queries) DeleteJob(ctx context.Context, id int64) error {
 }
 
 const selectBucket = `-- name: SelectBucket :one
-SELECT id, name, ec_config_id, status FROM bucket
+SELECT id, name, ec_config, status FROM bucket
 WHERE id = $1
 `
 
@@ -40,7 +40,7 @@ func (q *Queries) SelectBucket(ctx context.Context, id int64) (Bucket, error) {
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.EcConfigID,
+		&i.EcConfig,
 		&i.Status,
 	)
 	return i, err

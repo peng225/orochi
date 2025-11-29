@@ -8,6 +8,7 @@ import (
 
 	"github.com/peng225/orochi/internal/manager/api/server"
 	"github.com/peng225/orochi/internal/manager/handler"
+	"github.com/peng225/orochi/internal/manager/infra/gateway"
 	"github.com/peng225/orochi/internal/manager/infra/postgresql"
 	"github.com/peng225/orochi/internal/manager/service"
 	"github.com/peng225/orochi/internal/pkg/psqlutil"
@@ -25,6 +26,26 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		levelStr, err := cmd.Flags().GetString(getFlagName())
+		if err != nil {
+			slog.Error(err.Error())
+			os.Exit(1)
+		}
+		logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+			Level: parseLogLevel(levelStr),
+		}))
+		slog.SetDefault(logger)
+		port, err := cmd.Flags().GetString("port")
+		if err != nil {
+			slog.Error(err.Error())
+			os.Exit(1)
+		}
+		gatewayBaseURLs, err := cmd.Flags().GetStringSlice("gateway-base-url")
+		if err != nil {
+			slog.Error(err.Error())
+			os.Exit(1)
+		}
+
 		db := psqlutil.InitDB()
 		defer db.Close()
 		tx := psqlutil.NewTransaction(db)
@@ -34,12 +55,14 @@ to quickly create a Cobra application.`,
 		jobRepo := postgresql.NewJobRepository(db)
 		eccRepo := postgresql.NewECConfigRepository(db)
 		lgService := service.NewLocationGroupService(tx, dsRepo, lgRepo, eccRepo)
+		// FIXME: should use all of gateway base URLs.
+		gwClient := gateway.NewClient(gatewayBaseURLs[0])
 
 		dsHandler := handler.NewDatastoreHandler(
 			service.NewDatastoreService(tx, lgService, dsRepo),
 		)
 		bucketHandler := handler.NewBucketHandler(
-			service.NewBucketService(tx, lgService, bucketRepo, jobRepo, eccRepo),
+			service.NewBucketService(tx, lgService, bucketRepo, jobRepo, eccRepo, gwClient),
 		)
 		h := server.Handler(struct {
 			*handler.DatastoreHandler
@@ -48,11 +71,6 @@ to quickly create a Cobra application.`,
 			dsHandler,
 			bucketHandler,
 		})
-		port, err := cmd.Flags().GetString("port")
-		if err != nil {
-			slog.Error(err.Error())
-			os.Exit(1)
-		}
 		err = http.ListenAndServe(net.JoinHostPort("", port), h)
 		if err != nil {
 			slog.Error("Server failed to start.", "err", err)
@@ -74,4 +92,11 @@ func init() {
 	// is called directly, e.g.:
 	// managerCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	managerCmd.Flags().StringP("port", "p", "8080", "Port number")
+	managerCmd.Flags().StringSlice("gateway-base-url", nil, "A list of gateway base URL.")
+	setLogLevelFlag(managerCmd)
+
+	err := managerCmd.MarkFlagRequired("gateway-base-url")
+	if err != nil {
+		panic(err)
+	}
 }

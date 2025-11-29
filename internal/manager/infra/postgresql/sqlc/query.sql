@@ -43,9 +43,9 @@ WHERE ec_config_id = $1;
 
 -- name: InsertBucket :one
 INSERT INTO bucket (
-   name, ec_config_id, status
+   name, ec_config, status
 ) VALUES (
-  $1, $2, 'active'
+  $1, $2, 'creating'
 )
 RETURNING id;
 

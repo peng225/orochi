@@ -31,8 +31,8 @@ func (br *BucketRepository) CreateBucket(ctx context.Context, req *service.Creat
 		q = br.q.WithTx(tx)
 	}
 	id, err := q.InsertBucket(ctx, query.InsertBucketParams{
-		Name:       req.Name,
-		EcConfigID: req.ECConfigID,
+		Name:     req.Name,
+		EcConfig: req.ECConfig,
 	})
 	if err != nil {
 		return 0, fmt.Errorf("failed to insert bucket: %w", err)
@@ -54,10 +54,10 @@ func (br *BucketRepository) GetBucket(ctx context.Context, id int64) (*entity.Bu
 		return nil, fmt.Errorf("failed to select bucket: %w", err)
 	}
 	return &entity.Bucket{
-		ID:         bucket.ID,
-		Name:       bucket.Name,
-		ECConfigID: bucket.EcConfigID,
-		Status:     entity.BucketStatus(bucket.Status),
+		ID:       bucket.ID,
+		Name:     bucket.Name,
+		ECConfig: bucket.EcConfig,
+		Status:   entity.BucketStatus(bucket.Status),
 	}, nil
 }
 
@@ -75,10 +75,10 @@ func (br *BucketRepository) GetBucketByName(ctx context.Context, name string) (*
 		return nil, fmt.Errorf("failed to select bucket by name: %w", err)
 	}
 	return &entity.Bucket{
-		ID:         bucket.ID,
-		Name:       bucket.Name,
-		ECConfigID: bucket.EcConfigID,
-		Status:     entity.BucketStatus(bucket.Status),
+		ID:       bucket.ID,
+		Name:     bucket.Name,
+		ECConfig: bucket.EcConfig,
+		Status:   entity.BucketStatus(bucket.Status),
 	}, nil
 }
 

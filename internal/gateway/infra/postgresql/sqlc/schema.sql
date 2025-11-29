@@ -14,23 +14,13 @@ CREATE TABLE IF NOT EXISTS location_group(
     FOREIGN KEY (ec_config_id) REFERENCES ec_config(id)
 );
 
-CREATE TYPE bucket_status AS ENUM ('active', 'deleted');
-CREATE TABLE IF NOT EXISTS bucket(
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(128) NOT NULL UNIQUE,
-    ec_config_id BIGINT NOT NULL,
-    status bucket_status NOT NULL,
-    FOREIGN KEY (ec_config_id) REFERENCES ec_config(id)
-);
-
 CREATE TYPE object_status AS ENUM ('creating', 'updating', 'active');
 CREATE TABLE IF NOT EXISTS object_metadata(
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(128) NOT NULL,
     status object_status NOT NULL,
-    bucket_id BIGINT NOT NULL,
+    bucket_name VARCHAR(128) NOT NULL,
     location_group_id BIGINT NOT NULL,
-    FOREIGN KEY (bucket_id) REFERENCES bucket(id),
     FOREIGN KEY (location_group_id) REFERENCES location_group(id)
 );
 

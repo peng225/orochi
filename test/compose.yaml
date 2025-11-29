@@ -41,7 +41,7 @@ services:
     depends_on:
       initdb:
         condition: service_completed_successfully
-    command: ["manager", "-p", "8080"]
+    command: ["manager", "-p", "8080", "--gateway-base-url", "http://gateway:8081"]
     networks:
       - testnet
     ports:

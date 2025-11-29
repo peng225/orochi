@@ -9,7 +9,7 @@ info:
 
 security: []
 paths:
-  /{bucket}/{object}:
+  /data/{bucket}/{object}:
     put:
       summary: Create a object
       operationId: createObject
@@ -60,7 +60,7 @@ paths:
         '400':
           description: Bad request
 
-  /{bucket}:
+  /data/{bucket}:
     get:
       summary: List objects
       operationId: listObjects

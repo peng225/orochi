@@ -21,13 +21,12 @@ CREATE TABLE IF NOT EXISTS location_group(
     FOREIGN KEY (ec_config_id) REFERENCES ec_config(id)
 );
 
-CREATE TYPE bucket_status AS ENUM ('active', 'deleted');
+CREATE TYPE bucket_status AS ENUM ('creating', 'active', 'deleting');
 CREATE TABLE IF NOT EXISTS bucket(
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(128) NOT NULL UNIQUE,
-    ec_config_id BIGINT NOT NULL,
-    status bucket_status NOT NULL,
-    FOREIGN KEY (ec_config_id) REFERENCES ec_config(id)
+    ec_config VARCHAR(8) NOT NULL,
+    status bucket_status NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS job(

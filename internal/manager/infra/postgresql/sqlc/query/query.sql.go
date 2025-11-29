@@ -14,20 +14,20 @@ import (
 
 const insertBucket = `-- name: InsertBucket :one
 INSERT INTO bucket (
-   name, ec_config_id, status
+   name, ec_config, status
 ) VALUES (
-  $1, $2, 'active'
+  $1, $2, 'creating'
 )
 RETURNING id
 `
 
 type InsertBucketParams struct {
-	Name       string
-	EcConfigID int64
+	Name     string
+	EcConfig string
 }
 
 func (q *Queries) InsertBucket(ctx context.Context, arg InsertBucketParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, insertBucket, arg.Name, arg.EcConfigID)
+	row := q.db.QueryRowContext(ctx, insertBucket, arg.Name, arg.EcConfig)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -116,7 +116,7 @@ func (q *Queries) InsertLocationGroup(ctx context.Context, arg InsertLocationGro
 }
 
 const selectBucket = `-- name: SelectBucket :one
-SELECT id, name, ec_config_id, status FROM bucket
+SELECT id, name, ec_config, status FROM bucket
 WHERE id = $1
 `
 
@@ -126,14 +126,14 @@ func (q *Queries) SelectBucket(ctx context.Context, id int64) (Bucket, error) {
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.EcConfigID,
+		&i.EcConfig,
 		&i.Status,
 	)
 	return i, err
 }
 
 const selectBucketByName = `-- name: SelectBucketByName :one
-SELECT id, name, ec_config_id, status FROM bucket
+SELECT id, name, ec_config, status FROM bucket
 WHERE name = $1
 `
 
@@ -143,7 +143,7 @@ func (q *Queries) SelectBucketByName(ctx context.Context, name string) (Bucket, 
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.EcConfigID,
+		&i.EcConfig,
 		&i.Status,
 	)
 	return i, err

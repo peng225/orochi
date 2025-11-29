@@ -182,7 +182,7 @@ func NewListObjectsRequest(server string, bucket Bucket, params *ListObjectsPara
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/%s", pathParam0)
+	operationPath := fmt.Sprintf("/data/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -261,7 +261,7 @@ func NewDeleteObjectRequest(server string, bucket Bucket, object Object) (*http.
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/%s/%s", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/data/%s/%s", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -302,7 +302,7 @@ func NewGetObjectRequest(server string, bucket Bucket, object Object) (*http.Req
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/%s/%s", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/data/%s/%s", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -343,7 +343,7 @@ func NewCreateObjectRequestWithBody(server string, bucket Bucket, object Object,
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/%s/%s", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/data/%s/%s", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}

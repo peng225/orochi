@@ -32,16 +32,16 @@ type ListObjectsParams struct {
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// List objects
-	// (GET /{bucket})
+	// (GET /data/{bucket})
 	ListObjects(w http.ResponseWriter, r *http.Request, bucket Bucket, params ListObjectsParams)
 	// Delete a object
-	// (DELETE /{bucket}/{object})
+	// (DELETE /data/{bucket}/{object})
 	DeleteObject(w http.ResponseWriter, r *http.Request, bucket Bucket, object Object)
 	// Get a object
-	// (GET /{bucket}/{object})
+	// (GET /data/{bucket}/{object})
 	GetObject(w http.ResponseWriter, r *http.Request, bucket Bucket, object Object)
 	// Create a object
-	// (PUT /{bucket}/{object})
+	// (PUT /data/{bucket}/{object})
 	CreateObject(w http.ResponseWriter, r *http.Request, bucket Bucket, object Object)
 }
 
@@ -320,10 +320,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
-	m.HandleFunc("GET "+options.BaseURL+"/{bucket}", wrapper.ListObjects)
-	m.HandleFunc("DELETE "+options.BaseURL+"/{bucket}/{object}", wrapper.DeleteObject)
-	m.HandleFunc("GET "+options.BaseURL+"/{bucket}/{object}", wrapper.GetObject)
-	m.HandleFunc("PUT "+options.BaseURL+"/{bucket}/{object}", wrapper.CreateObject)
+	m.HandleFunc("GET "+options.BaseURL+"/data/{bucket}", wrapper.ListObjects)
+	m.HandleFunc("DELETE "+options.BaseURL+"/data/{bucket}/{object}", wrapper.DeleteObject)
+	m.HandleFunc("GET "+options.BaseURL+"/data/{bucket}/{object}", wrapper.GetObject)
+	m.HandleFunc("PUT "+options.BaseURL+"/data/{bucket}/{object}", wrapper.CreateObject)
 
 	return m
 }

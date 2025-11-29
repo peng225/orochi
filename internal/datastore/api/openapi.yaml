@@ -65,11 +65,6 @@ paths:
           description: Bad request
 
 components:
-  schemas:
-    objectList:
-      type: array
-      items:
-        type: string
   parameters:
     object:
       name: object

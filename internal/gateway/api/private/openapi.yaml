@@ -1,0 +1,64 @@
+openapi: 3.0.1
+info:
+  title: Orochi object API
+  version: 0.1.0
+  description: API for orochi gateway management
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+
+security: []
+paths:
+  /bucket:
+    post:
+      summary: Create a bucket
+      operationId: createBucket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/createBucketRequest'
+      responses:
+        '201':
+          description: Bucket created successfully
+        '400':
+          description: Bad request
+  /bucket/{name}:
+    put:
+      summary: Update a bucket status to "deleted"
+      operationId: updateBucketStatusToDeleting
+      parameters:
+        - $ref: '#/components/parameters/bucketName'
+      responses:
+        '200':
+          description: Bucket status updated successfully
+        '404':
+          description: Bucket not found
+    delete:
+      summary: Delete a bucket
+      operationId: deleteBucket
+      parameters:
+        - $ref: '#/components/parameters/bucketName'
+      responses:
+        '204':
+          description: Bucket deleted successfully
+
+components:
+  schemas:
+    createBucketRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: test-bucket
+        ecConfig:
+          type: string
+          example: 2D1P
+  parameters:
+    bucketName:
+      name: name
+      in: path
+      required: true
+      schema:
+        type: string

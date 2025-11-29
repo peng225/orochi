@@ -36,7 +36,7 @@ const insertObjectMetadata = `-- name: InsertObjectMetadata :one
 INSERT INTO object_metadata (
    name,
    status,
-   bucket_id,
+   bucket_name,
    location_group_id
 ) VALUES (
   $1, 'creating', $2, $3
@@ -46,12 +46,12 @@ RETURNING id
 
 type InsertObjectMetadataParams struct {
 	Name            string
-	BucketID        int64
+	BucketName      string
 	LocationGroupID int64
 }
 
 func (q *Queries) InsertObjectMetadata(ctx context.Context, arg InsertObjectMetadataParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, insertObjectMetadata, arg.Name, arg.BucketID, arg.LocationGroupID)
+	row := q.db.QueryRowContext(ctx, insertObjectMetadata, arg.Name, arg.BucketName, arg.LocationGroupID)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -79,23 +79,6 @@ func (q *Queries) InsertObjectVersion(ctx context.Context, arg InsertObjectVersi
 	return id, err
 }
 
-const selectBucketByName = `-- name: SelectBucketByName :one
-SELECT id, name, ec_config_id, status FROM bucket
-WHERE name = $1
-`
-
-func (q *Queries) SelectBucketByName(ctx context.Context, name string) (Bucket, error) {
-	row := q.db.QueryRowContext(ctx, selectBucketByName, name)
-	var i Bucket
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.EcConfigID,
-		&i.Status,
-	)
-	return i, err
-}
-
 const selectECConfig = `-- name: SelectECConfig :one
 SELECT id, num_data, num_parity FROM ec_config
 WHERE id = $1
@@ -103,6 +86,23 @@ WHERE id = $1
 
 func (q *Queries) SelectECConfig(ctx context.Context, id int64) (EcConfig, error) {
 	row := q.db.QueryRowContext(ctx, selectECConfig, id)
+	var i EcConfig
+	err := row.Scan(&i.ID, &i.NumData, &i.NumParity)
+	return i, err
+}
+
+const selectECConfigByNumbers = `-- name: SelectECConfigByNumbers :one
+SELECT id, num_data, num_parity FROM ec_config
+WHERE num_data = $1 AND num_parity = $2
+`
+
+type SelectECConfigByNumbersParams struct {
+	NumData   int32
+	NumParity int32
+}
+
+func (q *Queries) SelectECConfigByNumbers(ctx context.Context, arg SelectECConfigByNumbersParams) (EcConfig, error) {
+	row := q.db.QueryRowContext(ctx, selectECConfigByNumbers, arg.NumData, arg.NumParity)
 	var i EcConfig
 	err := row.Scan(&i.ID, &i.NumData, &i.NumParity)
 	return i, err
@@ -159,17 +159,17 @@ func (q *Queries) SelectLocationGroupsByECConfigID(ctx context.Context, ecConfig
 }
 
 const selectObjectMetadataByName = `-- name: SelectObjectMetadataByName :many
-SELECT id, name, status, bucket_id, location_group_id FROM object_metadata
-WHERE name = $1 AND bucket_id = $2
+SELECT id, name, status, bucket_name, location_group_id FROM object_metadata
+WHERE name = $1 AND bucket_name = $2
 `
 
 type SelectObjectMetadataByNameParams struct {
-	Name     string
-	BucketID int64
+	Name       string
+	BucketName string
 }
 
 func (q *Queries) SelectObjectMetadataByName(ctx context.Context, arg SelectObjectMetadataByNameParams) ([]ObjectMetadatum, error) {
-	rows, err := q.db.QueryContext(ctx, selectObjectMetadataByName, arg.Name, arg.BucketID)
+	rows, err := q.db.QueryContext(ctx, selectObjectMetadataByName, arg.Name, arg.BucketName)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +181,7 @@ func (q *Queries) SelectObjectMetadataByName(ctx context.Context, arg SelectObje
 			&i.ID,
 			&i.Name,
 			&i.Status,
-			&i.BucketID,
+			&i.BucketName,
 			&i.LocationGroupID,
 		); err != nil {
 			return nil, err
@@ -198,19 +198,19 @@ func (q *Queries) SelectObjectMetadataByName(ctx context.Context, arg SelectObje
 }
 
 const selectObjectMetadatas = `-- name: SelectObjectMetadatas :many
-SELECT id, name, status, bucket_id, location_group_id FROM object_metadata
-WHERE id >= $1 AND bucket_id = $2
+SELECT id, name, status, bucket_name, location_group_id FROM object_metadata
+WHERE id >= $1 AND bucket_name = $2
 LIMIT $3
 `
 
 type SelectObjectMetadatasParams struct {
-	ID       int64
-	BucketID int64
-	Limit    int32
+	ID         int64
+	BucketName string
+	Limit      int32
 }
 
 func (q *Queries) SelectObjectMetadatas(ctx context.Context, arg SelectObjectMetadatasParams) ([]ObjectMetadatum, error) {
-	rows, err := q.db.QueryContext(ctx, selectObjectMetadatas, arg.ID, arg.BucketID, arg.Limit)
+	rows, err := q.db.QueryContext(ctx, selectObjectMetadatas, arg.ID, arg.BucketName, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +222,7 @@ func (q *Queries) SelectObjectMetadatas(ctx context.Context, arg SelectObjectMet
 			&i.ID,
 			&i.Name,
 			&i.Status,
-			&i.BucketID,
+			&i.BucketName,
 			&i.LocationGroupID,
 		); err != nil {
 			return nil, err

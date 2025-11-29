@@ -21,6 +21,7 @@ type BucketService struct {
 	bucketRepo BucketRepository
 	jobRepo    JobRepository
 	eccRepo    ECConfigRepository
+	gwClient   GatewayClient
 }
 
 func NewBucketService(
@@ -29,6 +30,7 @@ func NewBucketService(
 	bucketRepo BucketRepository,
 	jobRepo JobRepository,
 	eccRepo ECConfigRepository,
+	gwClient GatewayClient,
 ) *BucketService {
 	return &BucketService{
 		tx:         tx,
@@ -36,6 +38,7 @@ func NewBucketService(
 		bucketRepo: bucketRepo,
 		jobRepo:    jobRepo,
 		eccRepo:    eccRepo,
+		gwClient:   gwClient,
 	}
 }
 
@@ -70,9 +73,10 @@ func (bs *BucketService) CreateBucket(ctx context.Context, name, ecConfigStr str
 
 		bucket, err := bs.bucketRepo.GetBucketByName(ctx, name)
 		if err == nil {
-			if bucket.ECConfigID != ecConfig.ID {
-				return errors.Join(fmt.Errorf("bucket with different EC config ID found: expected=%d, actual=%d",
-					ecConfig.ID, bucket.ECConfigID), ErrConflict)
+			d, p := entity.MustParseECConfig(bucket.ECConfig)
+			if d != ecConfig.NumData || p != ecConfig.NumParity {
+				return errors.Join(fmt.Errorf("bucket with different EC config found: expected=%dD%dP, actual=%s",
+					ecConfig.NumData, ecConfig.NumParity, bucket.ECConfig), ErrConflict)
 			} else if bucket.Status != entity.BucketStatusActive {
 				return errors.Join(fmt.Errorf("bucket with different status found: %s", bucket.Status), ErrConflict)
 			}
@@ -83,13 +87,14 @@ func (bs *BucketService) CreateBucket(ctx context.Context, name, ecConfigStr str
 		}
 
 		id, err = bs.bucketRepo.CreateBucket(ctx, &CreateBucketRequest{
-			Name:       name,
-			ECConfigID: ecConfig.ID,
+			Name:     name,
+			ECConfig: fmt.Sprintf("%dD%dP", ecConfig.NumData, ecConfig.NumParity),
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create bucket: %w", err)
 		}
 
+		// FIXME: move this function to gateway
 		err = bs.lgService.ReconstructLocationGroups(ctx, ecConfig)
 		if err != nil {
 			return fmt.Errorf("failed to reconstruct location groups: %w", err)
@@ -98,6 +103,17 @@ func (bs *BucketService) CreateBucket(ctx context.Context, name, ecConfigStr str
 	})
 	if err != nil {
 		return 0, fmt.Errorf("transaction failed: %w", err)
+	}
+
+	// FIXME: should create bucket for all gateways.
+	err = bs.gwClient.CreateBucket(ctx, name, ecConfigStr)
+	if err != nil {
+		return 0, fmt.Errorf("failed to create bucket for gateway: %w", err)
+	}
+
+	err = bs.bucketRepo.ChangeBucketStatus(ctx, id, entity.BucketStatusActive)
+	if err != nil {
+		return 0, fmt.Errorf("failed to change bucket status: %w", err)
 	}
 
 	return id, nil
@@ -114,7 +130,7 @@ func (bs *BucketService) GetBucket(ctx context.Context, id int64) (*entity.Bucke
 func (bs *BucketService) DeleteBucket(ctx context.Context, id int64) error {
 	var jobID int64
 	err := bs.tx.Do(ctx, func(ctx context.Context) error {
-		err := bs.bucketRepo.ChangeBucketStatus(ctx, id, entity.BucketStatusDeleted)
+		err := bs.bucketRepo.ChangeBucketStatus(ctx, id, entity.BucketStatusDeleting)
 		if err != nil {
 			return fmt.Errorf("failed to change bucket status: %w", err)
 		}
@@ -131,6 +147,16 @@ func (bs *BucketService) DeleteBucket(ctx context.Context, id int64) error {
 		})
 		if err != nil {
 			return fmt.Errorf("failed create job: %w", err)
+		}
+
+		bucket, err := bs.bucketRepo.GetBucket(ctx, id)
+		if err != nil {
+			return fmt.Errorf("failed to get bucket: %w", err)
+		}
+		// FIXME: should change status for all gateways.
+		err = bs.gwClient.ChangeBucketStatusToDeleting(ctx, bucket.Name)
+		if err != nil {
+			return fmt.Errorf("failed to change bucket status to deleting: %w", err)
 		}
 		return nil
 	})

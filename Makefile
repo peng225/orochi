@@ -30,19 +30,24 @@ lint: | $(GOLANGCI_LINT)
 
 .PHONY: lintapi
 lintapi:
-	npx @redocly/cli lint --config .redocly.yaml internal/manager/api/openapi.yaml internal/gateway/api/openapi.yaml
+	npx @redocly/cli lint --config .redocly.yaml internal/manager/api/openapi.yaml
+	npx @redocly/cli lint --config .redocly.yaml internal/gateway/api/openapi.yaml internal/gateway/api/private/openapi.yaml
+	npx @redocly/cli lint --config .redocly.yaml internal/datastore/api/openapi.yaml
 
 .PHONY: test
 test: build
 	go test -v ./internal/...
 
 .PHONY: html
-html: html/manager.html html/gateway.html html/datastore.html
+html: html/manager.html html/gateway.html html/gateway_private.html html/datastore.html
 
 html/manager.html: internal/manager/api/openapi.yaml
 	npx @redocly/cli build-docs $< -o $@
 
 html/gateway.html: internal/gateway/api/openapi.yaml
+	npx @redocly/cli build-docs $< -o $@
+
+html/gateway_private.html: internal/gateway/api/private/openapi.yaml
 	npx @redocly/cli build-docs $< -o $@
 
 html/datastore.html: internal/datastore/api/openapi.yaml
